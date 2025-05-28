@@ -38,5 +38,25 @@ val exerciseList = listOf(
         reps = 12,
         weight = 50.0,
         exercisePicture = R.drawable.agachamento
+    ),
+
+    Exercise(
+        name = "Barra fixa",
+        description = "Exercício de costas com barra fixa.",
+        sets = 3,
+        reps = 12,
+        weight = profileData.weight,
+        exercisePicture = R.drawable.pull_up
+
+    ),
+
+    Exercise(
+        name = "Levantamento terra",
+        description = "Exercício de levantamento terra com barra.",
+        sets = 3,
+        reps = 12,
+        weight = 100.0,
+        exercisePicture = R.drawable.deadlift
     )
+
 )
