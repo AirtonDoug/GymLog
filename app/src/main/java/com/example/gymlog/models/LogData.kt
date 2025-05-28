@@ -9,3 +9,11 @@ data class Workout(
     val name: String,
     val exercises: List<Exercise>
 )
+
+val workoutList = listOf(
+    Workout(
+        id = 1,
+        name = "Full Body Workout",
+        exercises = exerciseList
+    )
+)
