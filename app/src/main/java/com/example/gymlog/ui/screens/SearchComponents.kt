@@ -163,7 +163,9 @@ fun SearchResultsScreen(
     navController: NavController,
     searchQuery: String,
     searchResults: List<WorkoutRoutine>, // Corrected type
-    onSearchQueryChange: (String) -> Unit // Needed if search bar is part of this screen
+    onSearchQueryChange: (String) -> Unit, // Needed if search bar is part of this screen
+    favoriteRoutineIds: Set<Int>,
+    onToggleFavorite: (WorkoutRoutine) -> Unit
 ) {
     Scaffold(
         topBar = {

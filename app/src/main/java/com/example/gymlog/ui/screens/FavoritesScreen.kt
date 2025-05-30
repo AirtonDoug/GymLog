@@ -16,17 +16,26 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel // Import viewModel
 import androidx.navigation.NavController
-import com.example.gymlog.models.WorkoutRoutine // Corrected import
+import com.example.gymlog.models.WorkoutRoutine
 import com.example.gymlog.ui.components.BottomNavigationBar
+import com.example.gymlog.ui.viewmodel.FavoritesViewModel
+import com.example.gymlog.ui.navigation.FavoritesViewModelFactory // Assuming factory is in navigation package
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FavoritesScreen(
     navController: NavController,
-    favoriteWorkouts: List<WorkoutRoutine>, // Corrected type
-    onRemoveFavorite: (WorkoutRoutine) -> Unit // Corrected type
+    // Inject ViewModel
+    favoritesViewModel: FavoritesViewModel = viewModel(factory = FavoritesViewModelFactory()),
+    favoriteWorkouts: Nothing,
+    onRemoveFavorite: Nothing
 ) {
+    // Collect state from ViewModel
+    val uiState by favoritesViewModel.uiState.collectAsStateWithLifecycle()
+
     var showMenu by remember { mutableStateOf(false) }
 
     Scaffold(
@@ -35,51 +44,16 @@ fun FavoritesScreen(
                 title = { Text("Favoritos") },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(
-                            imageVector = Icons.Default.ArrowBack,
-                            contentDescription = "Voltar"
-                        )
+                        Icon(Icons.Default.ArrowBack, "Voltar")
                     }
                 },
                 actions = {
-                    // Menu de três pontinhos
                     IconButton(onClick = { showMenu = !showMenu }) {
-                        Icon(
-                            imageVector = Icons.Default.MoreVert,
-                            contentDescription = "Menu"
-                        )
+                        Icon(Icons.Default.MoreVert, "Menu")
                     }
-
-                    DropdownMenu(
-                        expanded = showMenu,
-                        onDismissRequest = { showMenu = false }
-                    ) {
-                        DropdownMenuItem(
-                            text = { Text("Configurações") },
-                            leadingIcon = {
-                                Icon(
-                                    imageVector = Icons.Default.Settings,
-                                    contentDescription = "Configurações"
-                                )
-                            },
-                            onClick = {
-                                navController.navigate("settings")
-                                showMenu = false
-                            }
-                        )
-                        DropdownMenuItem(
-                            text = { Text("Ajuda") },
-                            leadingIcon = {
-                                Icon(
-                                    imageVector = Icons.Default.Help,
-                                    contentDescription = "Ajuda"
-                                )
-                            },
-                            onClick = {
-                                navController.navigate("help")
-                                showMenu = false
-                            }
-                        )
+                    DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
+                        DropdownMenuItem(text = { Text("Configurações") }, leadingIcon = { Icon(Icons.Default.Settings, null) }, onClick = { navController.navigate("settings"); showMenu = false })
+                        DropdownMenuItem(text = { Text("Ajuda") }, leadingIcon = { Icon(Icons.Default.Help, null) }, onClick = { navController.navigate("help"); showMenu = false })
                     }
                 }
             )
@@ -88,79 +62,71 @@ fun FavoritesScreen(
             BottomNavigationBar(navController = navController)
         }
     ) { innerPadding ->
-        if (favoriteWorkouts.isEmpty()) {
-            // Exibir mensagem quando não há favoritos
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(innerPadding),
-                contentAlignment = Alignment.Center
-            ) {
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center
+        // Handle Loading, Error, and Empty states from ViewModel
+        when {
+            uiState.isLoading -> {
+                Box(modifier = Modifier.fillMaxSize().padding(innerPadding), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator()
+                }
+            }
+            uiState.errorMessage != null -> {
+                Box(modifier = Modifier.fillMaxSize().padding(innerPadding), contentAlignment = Alignment.Center) {
+                    Text("Erro: ${uiState.errorMessage}", color = MaterialTheme.colorScheme.error)
+                }
+            }
+            uiState.favoriteRoutines.isEmpty() -> {
+                // Display empty state message
+                Box(
+                    modifier = Modifier.fillMaxSize().padding(innerPadding),
+                    contentAlignment = Alignment.Center
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.Favorite,
-                        contentDescription = null,
-                        modifier = Modifier.size(80.dp),
-                        tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
-                    )
-
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    Text(
-                        text = "Nenhum treino favorito",
-                        style = MaterialTheme.typography.headlineSmall
-                    )
-
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    Text(
-                        text = "Adicione treinos aos favoritos para vê-los aqui",
-                        style = MaterialTheme.typography.bodyMedium
-                    )
-
-                    Spacer(modifier = Modifier.height(24.dp))
-
-                    Button(
-                        onClick = { navController.navigate("home") }
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.FitnessCenter,
-                            contentDescription = null
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Explorar Treinos")
+                        Icon(Icons.Default.Favorite, null, Modifier.size(80.dp), tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f))
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text("Nenhum treino favorito", style = MaterialTheme.typography.headlineSmall)
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text("Adicione treinos aos favoritos para vê-los aqui", style = MaterialTheme.typography.bodyMedium)
+                        Spacer(modifier = Modifier.height(24.dp))
+                        Button(onClick = { navController.navigate("home") }) {
+                            Icon(Icons.Default.FitnessCenter, null)
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Explorar Treinos")
+                        }
                     }
                 }
             }
-        } else {
-            // Exibir lista de favoritos
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(innerPadding)
-                    .padding(horizontal = 16.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp),
-                contentPadding = PaddingValues(vertical = 16.dp)
-            ) {
-                items(favoriteWorkouts, key = { it.id }) { workout -> // Use key = { it.id }
-                    FavoriteWorkoutCard(
-                        workout = workout,
-                        onClick = { navController.navigate("workout_details/${workout.id}") },
-                        onRemove = { onRemoveFavorite(workout) }
-                    )
+            else -> {
+                // Display list of favorites from ViewModel state
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(innerPadding)
+                        .padding(horizontal = 16.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp),
+                    contentPadding = PaddingValues(vertical = 16.dp)
+                ) {
+                    items(uiState.favoriteRoutines, key = { it.id }) { workout ->
+                        FavoriteWorkoutCard(
+                            workout = workout,
+                            onClick = { navController.navigate("workout_details/${workout.id}") },
+                            // Call ViewModel method to remove favorite
+                            onRemove = { favoritesViewModel.removeFavorite(workout) }
+                        )
+                    }
                 }
             }
         }
     }
 }
 
+// FavoriteWorkoutCard remains the same, receiving data and callbacks
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FavoriteWorkoutCard(
-    workout: WorkoutRoutine, // Corrected type
+    workout: WorkoutRoutine,
     onClick: () -> Unit,
     onRemove: () -> Unit
 ) {
@@ -172,17 +138,12 @@ fun FavoriteWorkoutCard(
     ) {
         Column {
             Box {
-                // Imagem do treino
                 Image(
                     painter = painterResource(id = workout.image),
                     contentDescription = workout.name,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(140.dp),
+                    modifier = Modifier.fillMaxWidth().height(140.dp),
                     contentScale = ContentScale.Crop
                 )
-
-                // Botão para remover dos favoritos
                 IconButton(
                     onClick = onRemove,
                     modifier = Modifier
@@ -201,69 +162,26 @@ fun FavoriteWorkoutCard(
                     )
                 }
             }
-
-            // Informações do treino
-            Column(
-                modifier = Modifier.padding(16.dp)
-            ) {
-                Text(
-                    text = workout.name,
-                    style = MaterialTheme.typography.titleLarge
-                )
-
+            Column(modifier = Modifier.padding(16.dp)) {
+                Text(workout.name, style = MaterialTheme.typography.titleLarge)
                 Spacer(modifier = Modifier.height(4.dp))
-
-                Text(
-                    text = workout.description,
-                    style = MaterialTheme.typography.bodyMedium,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis
-                )
-
+                Text(workout.description, style = MaterialTheme.typography.bodyMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)
                 Spacer(modifier = Modifier.height(8.dp))
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            imageVector = Icons.Default.Timer,
-                            contentDescription = "Duração",
-                            modifier = Modifier.size(16.dp)
-                        )
+                        Icon(Icons.Default.Timer, "Duração", Modifier.size(16.dp))
                         Spacer(modifier = Modifier.width(4.dp))
-                        Text(
-                            // Ensure duration is treated as Int/String correctly
-                            text = "${workout.duration} min",
-                            style = MaterialTheme.typography.bodySmall
-                        )
+                        Text("${workout.duration} min", style = MaterialTheme.typography.bodySmall)
                     }
-
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            imageVector = Icons.Default.FitnessCenter,
-                            contentDescription = "Categoria",
-                            modifier = Modifier.size(16.dp)
-                        )
+                        Icon(Icons.Default.FitnessCenter, "Categoria", Modifier.size(16.dp))
                         Spacer(modifier = Modifier.width(4.dp))
-                        Text(
-                            text = workout.category,
-                            style = MaterialTheme.typography.bodySmall
-                        )
+                        Text(workout.category, style = MaterialTheme.typography.bodySmall)
                     }
-
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            imageVector = Icons.Default.Speed,
-                            contentDescription = "Dificuldade",
-                            modifier = Modifier.size(16.dp)
-                        )
+                        Icon(Icons.Default.Speed, "Dificuldade", Modifier.size(16.dp))
                         Spacer(modifier = Modifier.width(4.dp))
-                        Text(
-                            text = workout.difficulty,
-                            style = MaterialTheme.typography.bodySmall
-                        )
+                        Text(workout.difficulty, style = MaterialTheme.typography.bodySmall)
                     }
                 }
             }

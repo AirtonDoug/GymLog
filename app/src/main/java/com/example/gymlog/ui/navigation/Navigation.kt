@@ -4,171 +4,149 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.SavedStateHandle
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
-import com.example.gymlog.models.WorkoutRoutine // Changed from WorkoutItem
-import com.example.gymlog.models.mockWorkoutRoutines // Changed from mockWorkouts
+import com.example.gymlog.data.repositories.MockWorkoutRepository // Temporary for factories
 import com.example.gymlog.ui.screens.*
+import com.example.gymlog.ui.viewmodel.*
+
+// Basic ViewModel Factory (replace with proper DI later)
+// You might want to move these factories to a dedicated file or use a DI framework
+class FavoritesViewModelFactory : ViewModelProvider.Factory {
+    @Suppress("UNCHECKED_CAST")
+    override fun <T : ViewModel> create(modelClass: Class<T>): T {
+        if (modelClass.isAssignableFrom(FavoritesViewModel::class.java)) {
+            return FavoritesViewModel(MockWorkoutRepository()) as T
+        }
+        throw IllegalArgumentException("Unknown ViewModel class")
+    }
+}
+
+class WorkoutDetailViewModelFactory(private val workoutId: Int) : ViewModelProvider.Factory {
+    @Suppress("UNCHECKED_CAST")
+    override fun <T : ViewModel> create(modelClass: Class<T>): T {
+        if (modelClass.isAssignableFrom(WorkoutDetailViewModel::class.java)) {
+            // In a real app, you would pass SavedStateHandle here,
+            // but viewModel() handles it. We pass the ID differently for simplicity here.
+            // A better approach uses Hilt or manual SavedStateHandle injection.
+            val fakeSavedStateHandle = SavedStateHandle(mapOf("workoutId" to workoutId))
+            return WorkoutDetailViewModel(fakeSavedStateHandle, MockWorkoutRepository()) as T
+        }
+        throw IllegalArgumentException("Unknown ViewModel class")
+    }
+}
 
 @Composable
 fun AppNavigation(
     navController: NavHostController,
-    isDarkTheme: Boolean, // Receive theme state from MainApp
-    onThemeToggle: () -> Unit // Receive toggle function from MainApp
+    // Theme state is still managed at a higher level (MainActivity/MainApp)
+    isDarkTheme: Boolean,
+    onThemeToggle: () -> Unit
 ) {
-    // Estado compartilhado entre telas (exceto tema)
-    var searchQuery by remember { mutableStateOf("") }
-    // Use WorkoutRoutine for favorites now, assuming routines can be favorited
-    var favoriteWorkouts by remember { mutableStateOf(mockWorkoutRoutines.filter { it.isFavorite }) }
-
-    // Funções de gerenciamento de estado (exceto tema)
-    val onSearchQueryChange: (String) -> Unit = { query ->
-        searchQuery = query
-    }
-
-    // Adapt favorite toggle for WorkoutRoutine
-    val onToggleFavorite: (WorkoutRoutine) -> Unit = { routine ->
-        val updatedRoutine = routine.copy(isFavorite = !routine.isFavorite)
-        // Update the source list if it's mutable or manage state appropriately
-        // For mock data, we might need to update the mockWorkoutRoutines list or handle state differently
-        favoriteWorkouts = if (updatedRoutine.isFavorite) {
-            (favoriteWorkouts + updatedRoutine).distinctBy { it.id }
-        } else {
-            favoriteWorkouts.filter { it.id != routine.id }
-        }
-        // Update the main list as well (important for consistency)
-        val index = mockWorkoutRoutines.indexOfFirst { it.id == routine.id }
-        if (index != -1) {
-            // This modification assumes mockWorkoutRoutines is mutable or handled via state
-            // In a real app, update the data source (DB, API)
-            // mockWorkoutRoutines[index] = updatedRoutine // This won't work if mockWorkoutRoutines is immutable List
-        }
-    }
-
-    val onClearFavorites: () -> Unit = {
-        favoriteWorkouts = emptyList()
-        // Also update the main list if necessary
-        mockWorkoutRoutines.forEach { it.isFavorite = false } // Example for mock data
-    }
-
-    val onResetPreferences: () -> Unit = {
-        // Reset other preferences if needed, theme is handled separately
-    }
+    // State like searchQuery and favorites is now managed within ViewModels.
+    // No need for remember { mutableStateOf(...) } here for that.
 
     NavHost(navController = navController, startDestination = "home") {
-        // Tela Inicial (Shows WorkoutRoutines now)
         composable("home") {
-            // HomeScreen might need adaptation if it was showing WorkoutItem before
-            HomeScreen(
-                navController = navController,
-                searchQuery = searchQuery,
-                onSearchQueryChange = onSearchQueryChange,
-                isDarkTheme = isDarkTheme,
-                onThemeToggle = onThemeToggle
-            )
+            // HomeScreen gets its ViewModel via viewModel()
+            HomeScreen(navController = navController)
+            // Theme props could be passed if needed for components outside ViewModel scope
+            // isDarkTheme = isDarkTheme,
+            // onThemeToggle = onThemeToggle
         }
 
-        // Tela de Log (Registro e Histórico)
         composable("log") {
+            // TODO: Create LogViewModel and refactor LogScreen
             LogScreen(navController = navController)
         }
 
-        // Tela de Perfil
         composable("profile") {
+            // TODO: Create ProfileViewModel and refactor ProfileScreen
             ProfileScreen(navController = navController)
         }
 
-        // Tela para Iniciar um Treino (Selecionar Rotina ou Personalizado)
         composable("start_workout") {
+            // TODO: Create StartWorkoutViewModel and refactor StartWorkoutScreen
             StartWorkoutScreen(navController = navController)
         }
 
-        // Tela de Treino Ativo (Registrando o Treino)
         composable(
             route = "active_workout/{workoutIdOrCustom}",
             arguments = listOf(navArgument("workoutIdOrCustom") { type = NavType.StringType })
         ) { backStackEntry ->
             val workoutIdOrCustom = backStackEntry.arguments?.getString("workoutIdOrCustom") ?: "custom"
-            ActiveWorkoutScreen(
+            // TODO: Create ActiveWorkoutViewModel and refactor ActiveWorkoutScreen
+            ActiveWorkoutScreen(navController = navController, workoutIdOrCustom = workoutIdOrCustom)
+        }
+
+        composable(
+            route = "workout_details/{workoutId}",
+            arguments = listOf(navArgument("workoutId") { type = NavType.IntType })
+        ) { backStackEntry ->
+            // WorkoutDetailScreen gets its ViewModel via viewModel(),
+            // which automatically handles SavedStateHandle for arguments.
+            WorkoutDetailScreen(
                 navController = navController,
-                workoutIdOrCustom = workoutIdOrCustom
+                workoutRoutine = TODO(),
+                isFavorite = TODO(),
+                onToggleFavorite = TODO(),
+                workoutId = TODO()
             )
         }
 
-        // Tela de Detalhes da Rotina (Adapt if needed)
-        composable(
-            route = "workout_details/{workoutId}", // Assuming this now shows Routine details
-            arguments = listOf(navArgument("workoutId") { type = NavType.IntType })
-        ) { backStackEntry ->
-            val workoutId = backStackEntry.arguments?.getInt("workoutId") ?: 1
-            // WorkoutDetailScreen might need adaptation for WorkoutRoutine
-            // Or create a new RoutineDetailScreen
-            /* WorkoutDetailScreen(
-                navController = navController,
-                workoutId = workoutId,
-                onToggleFavorite = { /* Adapt for Routine */ }
-            ) */
-            // Placeholder: Navigate back or show simple text until adapted
-            Column(Modifier.padding(16.dp)) { Text("Detalhes da Rotina ID: $workoutId (Adaptação Pendente)") }
-        }
-
-        // Tela de Favoritos (Shows WorkoutRoutines now)
         composable("favorites") {
-            // FavoritesScreen needs adaptation for WorkoutRoutine
-            /* FavoritesScreen(
+            // FavoritesScreen gets its ViewModel via viewModel()
+            FavoritesScreen(
                 navController = navController,
-                favoriteWorkouts = favoriteWorkouts, // Pass list of WorkoutRoutine
-                onRemoveFavorite = { routine -> onToggleFavorite(routine) }
-            ) */
-            // Placeholder: Navigate back or show simple text until adapted
-            Column(Modifier.padding(16.dp)) { Text("Favoritos (Adaptação Pendente)") }
+                favoriteWorkouts = TODO(),
+                onRemoveFavorite = TODO()
+            )
         }
 
-        // Tela de Configurações
         composable("settings") {
+            // SettingsScreen might need its own ViewModel too, especially for clearing favorites
+            // For now, passing callbacks might be acceptable if logic is simple
+            // TODO: Create SettingsViewModel and refactor SettingsScreen
+            // val settingsViewModel: SettingsViewModel = viewModel(...)
             SettingsScreen(
                 navController = navController,
                 isDarkTheme = isDarkTheme,
                 onThemeToggle = onThemeToggle,
-                onClearFavorites = onClearFavorites,
-                onResetPreferences = onResetPreferences
+                // TODO: Replace these with ViewModel actions
+                onClearFavorites = { /* settingsViewModel.clearFavorites() */ },
+                onResetPreferences = { /* settingsViewModel.resetPreferences() */ }
             )
         }
 
-        // Tela de Resultados de Busca (Adapt for WorkoutRoutine)
         composable("search") {
-            val searchResults = if (searchQuery.isEmpty()) {
-                emptyList()
-            } else {
-                mockWorkoutRoutines.filter {
-                    it.name.contains(searchQuery, ignoreCase = true) ||
-                            it.description.contains(searchQuery, ignoreCase = true) ||
-                            it.category.contains(searchQuery, ignoreCase = true) ||
-                            it.difficulty.contains(searchQuery, ignoreCase = true)
-                }
-            }
-            // SearchResultsScreen needs adaptation for WorkoutRoutine
+            // Search results can be part of HomeViewModel or a dedicated SearchViewModel
+            // Reusing HomeViewModel state for simplicity here
+            // val homeViewModel: HomeViewModel = viewModel() // Get potentially shared VM
+            // val uiState by homeViewModel.uiState.collectAsStateWithLifecycle()
+            // val searchQuery by homeViewModel.searchQuery.collectAsStateWithLifecycle()
+
+            // TODO: Refactor SearchResultsScreen to use ViewModel
             /* SearchResultsScreen(
                 navController = navController,
                 searchQuery = searchQuery,
-                searchResults = searchResults, // Pass list of WorkoutRoutine
-                onSearchQueryChange = onSearchQueryChange
+                searchResults = uiState.routines, // Use routines from HomeViewModel state
+                onSearchQueryChange = { homeViewModel.onSearchQueryChange(it) },
+                favoriteRoutineIds = uiState.routines.filter { it.isFavorite }.map { it.id }.toSet(), // Derive from state
+                onToggleFavorite = { homeViewModel.toggleFavorite(it) }
             ) */
-            // Placeholder: Navigate back or show simple text until adapted
-            Column(Modifier.padding(16.dp)) { Text("Resultados da Busca (Adaptação Pendente)") }
+            Column (Modifier.padding(16.dp)) { Text("Tela de Busca (Refatoração Pendente)") }
         }
 
-        // Tela de Ajuda e Suporte
         composable("help") {
+            // TODO: Create HelpViewModel and refactor HelpScreen if needed
             HelpScreen(navController = navController)
         }
     }

@@ -1,6 +1,7 @@
 package com.example.gymlog.ui.screens
 
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -11,25 +12,42 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel // Import viewModel
 import androidx.navigation.NavController
-import com.example.gymlog.models.WorkoutRoutine // Corrected import
-import com.example.gymlog.models.mockWorkoutRoutines // Corrected import
+import com.example.gymlog.models.WorkoutRoutine
 import com.example.gymlog.ui.components.BottomNavigationBar
+import com.example.gymlog.ui.components.StatRowSmall // Assuming StatRowSmall is defined
+import com.example.gymlog.ui.viewmodel.HomeViewModel
+import com.example.gymlog.data.repositories.MockWorkoutRepository // Temp import for factory
+
+// Basic ViewModel Factory (replace with proper DI later)
+class HomeViewModelFactory : androidx.lifecycle.ViewModelProvider.Factory {
+    @Suppress("UNCHECKED_CAST")
+    override fun <T : androidx.lifecycle.ViewModel> create(modelClass: Class<T>): T {
+        if (modelClass.isAssignableFrom(HomeViewModel::class.java)) {
+            // In a real app, inject the repository dependency here
+            return HomeViewModel(MockWorkoutRepository()) as T
+        }
+        throw IllegalArgumentException("Unknown ViewModel class")
+    }
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
     navController: NavController,
-    searchQuery: String = "",
-    onSearchQueryChange: (String) -> Unit,
-    isDarkTheme: Boolean, // Keep theme props if needed elsewhere
-    onThemeToggle: () -> Unit // Keep theme props if needed elsewhere
+    // Inject the ViewModel
+    homeViewModel: HomeViewModel = viewModel(factory = HomeViewModelFactory())
 ) {
+    // Collect state from ViewModel
+    val uiState by homeViewModel.uiState.collectAsStateWithLifecycle()
+    val searchQuery by homeViewModel.searchQuery.collectAsStateWithLifecycle()
+
     var showMenu by remember { mutableStateOf(false) }
 
     Scaffold(
@@ -37,86 +55,32 @@ fun HomeScreen(
             TopAppBar(
                 title = { Text("Gym Log") },
                 actions = {
-                    // Campo de busca (Simplified for now, can be extracted)
-                    // Consider moving search logic/state up if needed across screens
+                    // Search Field - Use ViewModel state and callback
                     OutlinedTextField(
-                        value = searchQuery,
-                        onValueChange = onSearchQueryChange,
+                        value = searchQuery, // Use state from ViewModel
+                        onValueChange = { homeViewModel.onSearchQueryChange(it) }, // Call ViewModel method
                         modifier = Modifier
                             .fillMaxWidth(0.6f)
                             .padding(end = 8.dp),
-                        placeholder = { Text("Buscar rotinas...") }, // Updated placeholder
+                        placeholder = { Text("Buscar rotinas...") },
                         singleLine = true,
-                        leadingIcon = {
-                            Icon(
-                                imageVector = Icons.Default.Search,
-                                contentDescription = "Buscar"
-                            )
-                        },
+                        leadingIcon = { Icon(Icons.Default.Search, "Buscar") },
                         trailingIcon = {
                             if (searchQuery.isNotEmpty()) {
-                                IconButton(onClick = { onSearchQueryChange("") }) {
-                                    Icon(
-                                        imageVector = Icons.Default.Clear,
-                                        contentDescription = "Limpar busca"
-                                    )
+                                IconButton(onClick = { homeViewModel.onSearchQueryChange("") }) { // Call ViewModel method
+                                    Icon(Icons.Default.Clear, "Limpar busca")
                                 }
                             }
-                        },
-
+                        }
                     )
-
-                    // Menu de três pontinhos
+                    // More Options Menu
                     IconButton(onClick = { showMenu = !showMenu }) {
-                        Icon(
-                            imageVector = Icons.Default.MoreVert,
-                            contentDescription = "Menu"
-                        )
+                        Icon(Icons.Default.MoreVert, "Menu")
                     }
-
-                    DropdownMenu(
-                        expanded = showMenu,
-                        onDismissRequest = { showMenu = false }
-                    ) {
-                        DropdownMenuItem(
-                            text = { Text("Favoritos") },
-                            leadingIcon = {
-                                Icon(
-                                    imageVector = Icons.Default.Favorite,
-                                    contentDescription = "Favoritos"
-                                )
-                            },
-                            onClick = {
-                                navController.navigate("favorites")
-                                showMenu = false
-                            }
-                        )
-                        DropdownMenuItem(
-                            text = { Text("Configurações") },
-                            leadingIcon = {
-                                Icon(
-                                    imageVector = Icons.Default.Settings,
-                                    contentDescription = "Configurações"
-                                )
-                            },
-                            onClick = {
-                                navController.navigate("settings")
-                                showMenu = false
-                            }
-                        )
-                        DropdownMenuItem(
-                            text = { Text("Ajuda") },
-                            leadingIcon = {
-                                Icon(
-                                    imageVector = Icons.Default.Help,
-                                    contentDescription = "Ajuda"
-                                )
-                            },
-                            onClick = {
-                                navController.navigate("help")
-                                showMenu = false
-                            }
-                        )
+                    DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
+                        DropdownMenuItem(text = { Text("Favoritos") }, leadingIcon = { Icon(Icons.Default.Favorite, null) }, onClick = { navController.navigate("favorites"); showMenu = false })
+                        DropdownMenuItem(text = { Text("Configurações") }, leadingIcon = { Icon(Icons.Default.Settings, null) }, onClick = { navController.navigate("settings"); showMenu = false })
+                        DropdownMenuItem(text = { Text("Ajuda") }, leadingIcon = { Icon(Icons.Default.Help, null) }, onClick = { navController.navigate("help"); showMenu = false })
                     }
                 }
             )
@@ -125,41 +89,51 @@ fun HomeScreen(
             BottomNavigationBar(navController = navController)
         }
     ) { innerPadding ->
-        // Filter WorkoutRoutines based on search query
-        val filteredWorkouts = if (searchQuery.isEmpty()) {
-            mockWorkoutRoutines
-        } else {
-            mockWorkoutRoutines.filter {
-                it.name.contains(searchQuery, ignoreCase = true) ||
-                        it.description.contains(searchQuery, ignoreCase = true) ||
-                        it.category.contains(searchQuery, ignoreCase = true) ||
-                        it.difficulty.contains(searchQuery, ignoreCase = true)
+        // Handle Loading and Error states
+        when {
+            uiState.isLoading -> {
+                Box(modifier = Modifier.fillMaxSize().padding(innerPadding), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator()
+                }
             }
-        }
-
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-                .padding(horizontal = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
-            contentPadding = PaddingValues(vertical = 16.dp)
-        ) {
-            // Display WorkoutRoutine cards
-            items(filteredWorkouts, key = { it.id }) { routine -> // Use key = { it.id }
-                WorkoutCard(
-                    workout = routine, // Pass WorkoutRoutine
-                    onClick = { navController.navigate("workout_details/${routine.id}") } // Navigate to routine details
-                )
+            uiState.errorMessage != null -> {
+                Box(modifier = Modifier.fillMaxSize().padding(innerPadding), contentAlignment = Alignment.Center) {
+                    Text("Erro: ${uiState.errorMessage}", color = MaterialTheme.colorScheme.error)
+                }
+            }
+            else -> {
+                // Display list when data is available
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(innerPadding)
+                        .padding(horizontal = 16.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp),
+                    contentPadding = PaddingValues(vertical = 16.dp)
+                ) {
+                    items(uiState.routines, key = { it.id }) { routine ->
+                        WorkoutCard(
+                            workout = routine,
+                            // isFavorite is now part of the WorkoutRoutine from the ViewModel/Repository flow
+                            isFavorite = routine.isFavorite,
+                            // Pass the ViewModel toggle function directly
+                            onToggleFavorite = { homeViewModel.toggleFavorite(routine) },
+                            onClick = { navController.navigate("workout_details/${routine.id}") }
+                        )
+                    }
+                }
             }
         }
     }
 }
 
+// WorkoutCard remains largely the same, receiving isFavorite and onToggleFavorite
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun WorkoutCard(
-    workout: WorkoutRoutine, // Corrected type
+    workout: WorkoutRoutine,
+    isFavorite: Boolean,
+    onToggleFavorite: () -> Unit,
     onClick: () -> Unit
 ) {
     Card(
@@ -169,56 +143,50 @@ fun WorkoutCard(
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
     ) {
         Column {
-            // Imagem do treino
-            Image(
-                painter = painterResource(id = workout.image),
-                contentDescription = workout.name,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(180.dp),
-                contentScale = ContentScale.Crop
-            )
-
-            // Informações do treino
-            Column(
-                modifier = Modifier.padding(16.dp)
-            ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = workout.name,
-                        style = MaterialTheme.typography.headlineSmall
-                    )
-
-                    // Display favorite icon if the routine is favorited
-                    if (workout.isFavorite) {
-                        Icon(
-                            imageVector = Icons.Default.Favorite,
-                            contentDescription = "Favorito",
-                            tint = MaterialTheme.colorScheme.primary
+            Box {
+                Image(
+                    painter = painterResource(id = workout.image),
+                    contentDescription = workout.name,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(180.dp),
+                    contentScale = ContentScale.Crop
+                )
+                IconButton(
+                    onClick = onToggleFavorite,
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(8.dp)
+                        .size(36.dp)
+                        .background(
+                            MaterialTheme.colorScheme.surface.copy(alpha = 0.8f),
+                            shape = androidx.compose.foundation.shape.CircleShape
                         )
-                    }
+                ) {
+                    Icon(
+                        imageVector = if (isFavorite) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
+                        contentDescription = if (isFavorite) "Remover dos Favoritos" else "Adicionar aos Favoritos",
+                        tint = if (isFavorite) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
-
+            }
+            Column(modifier = Modifier.padding(16.dp)) {
+                Text(
+                    text = workout.name,
+                    style = MaterialTheme.typography.headlineSmall
+                )
                 Spacer(modifier = Modifier.height(8.dp))
-
                 Text(
                     text = workout.description,
                     style = MaterialTheme.typography.bodyMedium,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis
                 )
-
                 Spacer(modifier = Modifier.height(8.dp))
-
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    // Use StatRowSmall or similar component if defined elsewhere
                     StatRowSmall(icon = Icons.Default.Timer, value = "${workout.duration} min")
                     StatRowSmall(icon = Icons.Default.FitnessCenter, value = workout.category)
                     StatRowSmall(icon = Icons.Default.Speed, value = workout.difficulty)
@@ -227,22 +195,3 @@ fun WorkoutCard(
         }
     }
 }
-
-// Ensure StatRowSmall is defined or import it if it's in another file
-/* @Composable
-fun StatRowSmall(icon: androidx.compose.ui.graphics.vector.ImageVector, value: String) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        Icon(
-            imageVector = icon,
-            contentDescription = null,
-            modifier = Modifier.size(14.dp),
-            tint = MaterialTheme.colorScheme.secondary
-        )
-        Spacer(modifier = Modifier.width(4.dp))
-        Text(
-            text = value,
-            style = MaterialTheme.typography.labelMedium
-        )
-    }
-} */
-
