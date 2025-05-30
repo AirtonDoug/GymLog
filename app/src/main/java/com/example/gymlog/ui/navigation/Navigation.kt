@@ -4,11 +4,14 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.viewmodel.compose.viewModel // Import viewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -24,6 +27,7 @@ class FavoritesViewModelFactory : ViewModelProvider.Factory {
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(FavoritesViewModel::class.java)) {
+            // In a real app, use Hilt or another DI framework to provide the repository
             return FavoritesViewModel(MockWorkoutRepository()) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class")
@@ -93,21 +97,27 @@ fun AppNavigation(
         ) { backStackEntry ->
             // WorkoutDetailScreen gets its ViewModel via viewModel(),
             // which automatically handles SavedStateHandle for arguments.
+            // TODO: Implement WorkoutDetailScreen properly with ViewModel
             WorkoutDetailScreen(
                 navController = navController,
-                workoutRoutine = TODO(),
-                isFavorite = TODO(),
-                onToggleFavorite = TODO(),
-                workoutId = TODO()
+                workoutRoutine = TODO(), // Needs data from WorkoutDetailViewModel
+                isFavorite = TODO(),     // Needs data from WorkoutDetailViewModel
+                onToggleFavorite = TODO(), // Needs action from WorkoutDetailViewModel
+                workoutId = backStackEntry.arguments?.getInt("workoutId") ?: -1 // Pass the ID
             )
         }
 
         composable("favorites") {
-            // FavoritesScreen gets its ViewModel via viewModel()
+            // Instantiate FavoritesViewModel using the factory (or Hilt in a real app)
+            val favoritesViewModel: FavoritesViewModel = viewModel(factory = FavoritesViewModelFactory())
+            // Collect the UI state from the ViewModel
+            val uiState by favoritesViewModel.uiState.collectAsState()
+
+            // Pass the collected state and the remove function to the screen
             FavoritesScreen(
                 navController = navController,
-                favoriteWorkouts = TODO(),
-                onRemoveFavorite = TODO()
+                favoriteWorkouts = uiState.favoriteRoutines, // Pass the list from state
+                onRemoveFavorite = { routine -> favoritesViewModel.removeFavorite(routine) } // Pass the remove function
             )
         }
 
@@ -151,3 +161,4 @@ fun AppNavigation(
         }
     }
 }
+

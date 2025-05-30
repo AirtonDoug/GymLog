@@ -16,8 +16,8 @@ fun BottomNavigationBar(navController: NavController) {
     NavigationBar {
         val items = listOf(
             Triple("home", "Home", Icons.Default.Home),
-            Triple("log", "Log", Icons.Default.AssignmentInd),
-            Triple("profile", "Profile", Icons.Default.PermIdentity)
+            Triple("log", "Registro", Icons.Default.AssignmentInd),
+            Triple("profile", "Perfil", Icons.Default.PermIdentity)
         )
         items.forEach { (route, label, icon) ->
             NavigationBarItem(

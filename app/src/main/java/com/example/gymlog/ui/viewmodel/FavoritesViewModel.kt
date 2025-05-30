@@ -27,11 +27,11 @@ class FavoritesViewModel(private val workoutRepository: WorkoutRepository) : Vie
             initialValue = FavoritesUiState(isLoading = true)
         )
 
-    fun removeFavorite(routine: WorkoutRoutine) {
+    fun removeFavorite(routine: Any) {
         viewModelScope.launch {
             try {
                 // Toggle favorite will remove it if it's already a favorite
-                workoutRepository.toggleFavorite(routine.id)
+                workoutRepository.toggleFavorite(routine)
             } catch (e: Exception) {
                 // Handle error
                 // Consider updating UI state with an error message

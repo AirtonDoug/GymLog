@@ -30,8 +30,8 @@ fun FavoritesScreen(
     navController: NavController,
     // Inject ViewModel
     favoritesViewModel: FavoritesViewModel = viewModel(factory = FavoritesViewModelFactory()),
-    favoriteWorkouts: Nothing,
-    onRemoveFavorite: Nothing
+    favoriteWorkouts: List<WorkoutRoutine>,
+    onRemoveFavorite: (Any) -> Unit
 ) {
     // Collect state from ViewModel
     val uiState by favoritesViewModel.uiState.collectAsStateWithLifecycle()

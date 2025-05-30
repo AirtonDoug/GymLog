@@ -14,7 +14,7 @@ interface WorkoutRepository {
     fun getWorkoutRoutines(): Flow<List<WorkoutRoutine>>
     fun getWorkoutRoutineById(id: Int): Flow<WorkoutRoutine?>
     fun getFavoriteWorkoutRoutines(): Flow<List<WorkoutRoutine>>
-    suspend fun toggleFavorite(routineId: Int)
+    suspend fun toggleFavorite(routineId: Any)
     suspend fun clearFavorites()
 }
 
@@ -46,13 +46,13 @@ class MockWorkoutRepository : WorkoutRepository {
         return getWorkoutRoutines().map { routines -> routines.filter { it.isFavorite } }
     }
 
-    override suspend fun toggleFavorite(routineId: Int) {
+    override suspend fun toggleFavorite(routineId: Any) {
         _favoriteIds.update { currentIds ->
-            if (routineId in currentIds) {
+            if (routineId in currentIds) ({
                 currentIds - routineId
-            } else {
+            }) as Set<Int> else ({
                 currentIds + routineId
-            }
+            }) as Set<Int>
         }
         // Note: We are not modifying the original mockWorkoutRoutines list directly.
         // The isFavorite status is derived dynamically in the flows.

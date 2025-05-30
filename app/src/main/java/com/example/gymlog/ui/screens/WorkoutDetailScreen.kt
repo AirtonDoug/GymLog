@@ -45,7 +45,7 @@ fun WorkoutDetailScreen(
     workoutRoutine: Nothing,
     isFavorite: Nothing,
     onToggleFavorite: Nothing,
-    workoutId: Nothing
+    workoutId: Int
 ) {
     // Collect state from ViewModel
     val uiState by detailViewModel.uiState.collectAsStateWithLifecycle()
