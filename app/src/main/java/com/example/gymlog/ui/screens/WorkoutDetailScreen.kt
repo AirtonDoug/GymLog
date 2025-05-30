@@ -21,11 +21,12 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.example.gymlog.models.Exercise
-import com.example.gymlog.models.WorkoutItem
-import com.example.gymlog.models.mockWorkouts
+import com.example.gymlog.models.WorkoutRoutine // Corrected import
+import com.example.gymlog.models.mockWorkoutRoutines // Corrected import
 import com.example.gymlog.ui.components.BottomNavigationBar
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -33,14 +34,14 @@ import com.example.gymlog.ui.components.BottomNavigationBar
 fun WorkoutDetailScreen(
     navController: NavController,
     workoutId: Int,
-    onToggleFavorite: (WorkoutItem) -> Unit
+    onToggleFavorite: (WorkoutRoutine) -> Unit // Corrected type
 ) {
-    // Encontrar o treino pelo ID
-    val workout = mockWorkouts.find { it.id == workoutId }
-        ?: return // Se não encontrar, não exibe nada
+    // Find the routine by ID
+    val workout = mockWorkoutRoutines.find { it.id == workoutId }
+        ?: return // If not found, don't display anything
 
     var isFavorite by remember { mutableStateOf(workout.isFavorite) }
-    var isPlaying by remember { mutableStateOf(false) }
+    var isPlaying by remember { mutableStateOf(false) } // State for media playback
     var showMenu by remember { mutableStateOf(false) }
 
     Scaffold(
@@ -49,76 +50,32 @@ fun WorkoutDetailScreen(
                 title = { Text(workout.name) },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(
-                            imageVector = Icons.Default.ArrowBack,
-                            contentDescription = "Voltar"
-                        )
+                        Icon(Icons.Default.ArrowBack, "Voltar")
                     }
                 },
                 actions = {
+                    // Favorite Button
                     IconButton(
                         onClick = {
                             isFavorite = !isFavorite
+                            // Create a new object for state update if needed
                             onToggleFavorite(workout.copy(isFavorite = isFavorite))
                         }
                     ) {
                         Icon(
                             imageVector = if (isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
                             contentDescription = if (isFavorite) "Remover dos favoritos" else "Adicionar aos favoritos",
-                            tint = if (isFavorite) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                            tint = if (isFavorite) MaterialTheme.colorScheme.primary else LocalContentColor.current
                         )
                     }
-
+                    // More Options Menu
                     IconButton(onClick = { showMenu = !showMenu }) {
-                        Icon(
-                            imageVector = Icons.Default.MoreVert,
-                            contentDescription = "Menu"
-                        )
+                        Icon(Icons.Default.MoreVert, "Menu")
                     }
-
-                    DropdownMenu(
-                        expanded = showMenu,
-                        onDismissRequest = { showMenu = false }
-                    ) {
-                        DropdownMenuItem(
-                            text = { Text("Favoritos") },
-                            leadingIcon = {
-                                Icon(
-                                    imageVector = Icons.Default.Favorite,
-                                    contentDescription = "Favoritos"
-                                )
-                            },
-                            onClick = {
-                                navController.navigate("favorites")
-                                showMenu = false
-                            }
-                        )
-                        DropdownMenuItem(
-                            text = { Text("Configurações") },
-                            leadingIcon = {
-                                Icon(
-                                    imageVector = Icons.Default.Settings,
-                                    contentDescription = "Configurações"
-                                )
-                            },
-                            onClick = {
-                                navController.navigate("settings")
-                                showMenu = false
-                            }
-                        )
-                        DropdownMenuItem(
-                            text = { Text("Ajuda") },
-                            leadingIcon = {
-                                Icon(
-                                    imageVector = Icons.Default.Help,
-                                    contentDescription = "Ajuda"
-                                )
-                            },
-                            onClick = {
-                                navController.navigate("help")
-                                showMenu = false
-                            }
-                        )
+                    DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
+                        DropdownMenuItem(text = { Text("Favoritos") }, onClick = { navController.navigate("favorites"); showMenu = false }, leadingIcon = { Icon(Icons.Default.Favorite, null) })
+                        DropdownMenuItem(text = { Text("Configurações") }, onClick = { navController.navigate("settings"); showMenu = false }, leadingIcon = { Icon(Icons.Default.Settings, null) })
+                        DropdownMenuItem(text = { Text("Ajuda") }, onClick = { navController.navigate("help"); showMenu = false }, leadingIcon = { Icon(Icons.Default.Help, null) })
                     }
                 }
             )
@@ -133,7 +90,7 @@ fun WorkoutDetailScreen(
                 .padding(innerPadding)
                 .verticalScroll(rememberScrollState())
         ) {
-            // Imagem do treino
+            // Workout Image Header
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -145,205 +102,80 @@ fun WorkoutDetailScreen(
                     modifier = Modifier.fillMaxSize(),
                     contentScale = ContentScale.Crop
                 )
-
-                // Overlay para informações sobre a imagem
-                Box(
+                Box( // Dark overlay for text contrast
                     modifier = Modifier
                         .fillMaxSize()
-                        .background(Color.Black.copy(alpha = 0.3f))
+                        .background(Color.Black.copy(alpha = 0.4f))
                 )
-
-                // Informações básicas
                 Column(
                     modifier = Modifier
                         .align(Alignment.BottomStart)
                         .padding(16.dp)
                 ) {
-                    Text(
-                        text = workout.name,
-                        style = MaterialTheme.typography.headlineMedium,
-                        color = Color.White,
-                        fontWeight = FontWeight.Bold
-                    )
-
+                    Text(workout.name, style = MaterialTheme.typography.headlineMedium, color = Color.White, fontWeight = FontWeight.Bold)
                     Spacer(modifier = Modifier.height(4.dp))
-
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            imageVector = Icons.Default.FitnessCenter,
-                            contentDescription = "Categoria",
-                            tint = Color.White,
-                            modifier = Modifier.size(16.dp)
-                        )
+                        Icon(Icons.Default.FitnessCenter, "Categoria", tint = Color.White, modifier = Modifier.size(16.dp))
                         Spacer(modifier = Modifier.width(4.dp))
-                        Text(
-                            text = workout.category,
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = Color.White
-                        )
-
+                        Text(workout.category, style = MaterialTheme.typography.bodyMedium, color = Color.White)
                         Spacer(modifier = Modifier.width(16.dp))
-
-                        Icon(
-                            imageVector = Icons.Default.Speed,
-                            contentDescription = "Dificuldade",
-                            tint = Color.White,
-                            modifier = Modifier.size(16.dp)
-                        )
+                        Icon(Icons.Default.Speed, "Dificuldade", tint = Color.White, modifier = Modifier.size(16.dp))
                         Spacer(modifier = Modifier.width(4.dp))
-                        Text(
-                            text = workout.difficulty,
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = Color.White
-                        )
+                        Text(workout.difficulty, style = MaterialTheme.typography.bodyMedium, color = Color.White)
                     }
                 }
-
-                // Botão de play para vídeo ou áudio
+                // Play Button (if media exists)
                 if (workout.videoUrl != null || workout.audioUrl != null) {
                     FloatingActionButton(
                         onClick = { isPlaying = !isPlaying },
-                        modifier = Modifier
-                            .align(Alignment.Center)
-                            .size(56.dp),
+                        modifier = Modifier.align(Alignment.Center).size(56.dp),
                         containerColor = MaterialTheme.colorScheme.primary
                     ) {
                         Icon(
-                            imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
-                            contentDescription = if (isPlaying) "Pausar" else "Reproduzir",
+                            if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                            if (isPlaying) "Pausar" else "Reproduzir",
                             tint = MaterialTheme.colorScheme.onPrimary
                         )
                     }
                 }
             }
 
-            // Informações detalhadas
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp)
-            ) {
-                // Estatísticas do treino
+            // Detailed Information Section
+            Column(modifier = Modifier.padding(16.dp)) {
+                // Stats Row
                 Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 16.dp),
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp),
                     horizontalArrangement = Arrangement.SpaceEvenly
                 ) {
-                    StatItem(
-                        icon = Icons.Default.Timer,
-                        value = "${workout.duration}",
-                        label = "minutos"
-                    )
-
-                    StatItem(
-                        icon = Icons.Default.LocalFireDepartment,
-                        value = "${workout.caloriesBurned}",
-                        label = "calorias"
-                    )
-
-                    StatItem(
-                        icon = Icons.Default.FitnessCenter,
-                        value = "${workout.exercises.size}",
-                        label = "exercícios"
-                    )
+                    StatItem(icon = Icons.Default.Timer, value = "${workout.duration}", label = "minutos")
+                    StatItem(icon = Icons.Default.LocalFireDepartment, value = "${workout.caloriesBurned}", label = "calorias")
+                    StatItem(icon = Icons.Default.FitnessCenter, value = "${workout.exercises.size}", label = "exercícios")
                 }
-
                 Divider()
 
-                // Descrição
-                Text(
-                    text = "Descrição",
-                    style = MaterialTheme.typography.titleLarge,
-                    modifier = Modifier.padding(vertical = 16.dp)
-                )
+                // Description
+                Text("Descrição", style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(top = 16.dp, bottom = 8.dp))
+                Text(workout.description, style = MaterialTheme.typography.bodyMedium)
 
-                Text(
-                    text = workout.description,
-                    style = MaterialTheme.typography.bodyMedium
-                )
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                // Controles de multimídia
+                // Media Player Card (Simplified)
                 if (workout.videoUrl != null || workout.audioUrl != null) {
-                    Card(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 8.dp),
-                        colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.surfaceVariant
-                        )
-                    ) {
-                        Column(
-                            modifier = Modifier.padding(16.dp)
-                        ) {
-                            Text(
-                                text = if (workout.videoUrl != null) "Vídeo do treino" else "Áudio do treino",
-                                style = MaterialTheme.typography.titleMedium
-                            )
-
-                            Spacer(modifier = Modifier.height(8.dp))
-
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                IconButton(onClick = { /* Retroceder */ }) {
-                                    Icon(
-                                        imageVector = Icons.Default.SkipPrevious,
-                                        contentDescription = "Retroceder"
-                                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Text(if (workout.videoUrl != null) "Vídeo do treino" else "Áudio do treino", style = MaterialTheme.typography.titleMedium)
+                            Spacer(modifier = Modifier.height(16.dp))
+                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.CenterVertically) {
+                                IconButton(onClick = { /* TODO: Implement seek back */ }) { Icon(Icons.Default.SkipPrevious, "Retroceder") }
+                                IconButton(onClick = { isPlaying = !isPlaying }, modifier = Modifier.size(48.dp).background(MaterialTheme.colorScheme.primary, CircleShape)) {
+                                    Icon(if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow, if (isPlaying) "Pausar" else "Reproduzir", tint = MaterialTheme.colorScheme.onPrimary)
                                 }
-
-                                IconButton(
-                                    onClick = { isPlaying = !isPlaying },
-                                    modifier = Modifier
-                                        .size(48.dp)
-                                        .background(
-                                            MaterialTheme.colorScheme.primary,
-                                            CircleShape
-                                        )
-                                ) {
-                                    Icon(
-                                        imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
-                                        contentDescription = if (isPlaying) "Pausar" else "Reproduzir",
-                                        tint = MaterialTheme.colorScheme.onPrimary
-                                    )
-                                }
-
-                                IconButton(onClick = { /* Avançar */ }) {
-                                    Icon(
-                                        imageVector = Icons.Default.SkipNext,
-                                        contentDescription = "Avançar"
-                                    )
-                                }
+                                IconButton(onClick = { /* TODO: Implement seek forward */ }) { Icon(Icons.Default.SkipNext, "Avançar") }
                             }
-
                             Spacer(modifier = Modifier.height(8.dp))
-
-                            // Barra de progresso
-                            LinearProgressIndicator(
-                                progress = if (isPlaying) 0.3f else 0f,
-                                modifier = Modifier.fillMaxWidth()
-                            )
-
-                            Spacer(modifier = Modifier.height(4.dp))
-
-                            // Tempo
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween
-                            ) {
-                                Text(
-                                    text = if (isPlaying) "1:30" else "0:00",
-                                    style = MaterialTheme.typography.bodySmall
-                                )
-                                Text(
-                                    text = "5:00",
-                                    style = MaterialTheme.typography.bodySmall
-                                )
+                            LinearProgressIndicator(progress = if (isPlaying) 0.3f else 0f, modifier = Modifier.fillMaxWidth()) // TODO: Link progress
+                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                Text(if (isPlaying) "1:30" else "0:00", style = MaterialTheme.typography.bodySmall) // TODO: Link time
+                                Text("5:00", style = MaterialTheme.typography.bodySmall) // TODO: Link total duration
                             }
                         }
                     }
@@ -351,186 +183,59 @@ fun WorkoutDetailScreen(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Lista de exercícios
-                Text(
-                    text = "Exercícios",
-                    style = MaterialTheme.typography.titleLarge,
-                    modifier = Modifier.padding(vertical = 8.dp)
-                )
-
+                // Exercises List
+                Text("Exercícios", style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(bottom = 8.dp))
                 workout.exercises.forEachIndexed { index, exercise ->
-                    ExerciseItem(
-                        exercise = exercise,
-                        index = index + 1
-                    )
-
+                    ExerciseItem(exercise = exercise, index = index + 1)
                     if (index < workout.exercises.size - 1) {
-                        Divider(
-                            modifier = Modifier.padding(vertical = 8.dp)
-                        )
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(24.dp))
-
-                // Treinos relacionados
-                Text(
-                    text = "Treinos relacionados",
-                    style = MaterialTheme.typography.titleLarge,
-                    modifier = Modifier.padding(vertical = 8.dp)
-                )
-
-                // Filtrar treinos relacionados (mesma categoria, excluindo o atual)
-                val relatedWorkouts = mockWorkouts.filter {
-                    it.category == workout.category && it.id != workout.id
-                }
-
-                LazyRow(
-                    horizontalArrangement = Arrangement.spacedBy(16.dp),
-                    contentPadding = PaddingValues(vertical = 8.dp)
-                ) {
-                    items(relatedWorkouts) { relatedWorkout ->
-                        RelatedWorkoutItem(
-                            workout = relatedWorkout,
-                            onClick = {
-                                navController.navigate("workout_details/${relatedWorkout.id}")
-                            }
-                        )
+                        Divider(modifier = Modifier.padding(vertical = 8.dp))
                     }
                 }
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Botões de ação
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceEvenly
-                ) {
-                    Button(
-                        onClick = { /* Iniciar treino */ },
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.PlayArrow,
-                            contentDescription = null
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Iniciar Treino")
-                    }
+                // Related Workouts (LazyRow)
+                Text("Rotinas Relacionadas", style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(bottom = 8.dp))
+                LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    // Filter related routines (example: same category, different ID)
+                    val relatedRoutines = mockWorkoutRoutines.filter {
+                        it.category == workout.category && it.id != workout.id
+                    }.take(5) // Limit number of related items
 
-                    Spacer(modifier = Modifier.width(16.dp))
-
-                    OutlinedButton(
-                        onClick = { /* Compartilhar */ },
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Share,
-                            contentDescription = null
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Compartilhar")
+                    items(relatedRoutines, key = { it.id }) { relatedWorkout ->
+                        RelatedWorkoutCard(workout = relatedWorkout) {
+                            navController.navigate("workout_details/${relatedWorkout.id}") {
+                                // Avoid multiple copies of the same screen on the back stack
+                                popUpTo("workout_details/${workout.id}") { inclusive = true }
+                            }
+                        }
                     }
                 }
+                Spacer(modifier = Modifier.height(16.dp))
             }
         }
     }
 }
 
 @Composable
-fun StatItem(
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    value: String,
-    label: String
-) {
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.primary
-        )
-
+fun StatItem(icon: androidx.compose.ui.graphics.vector.ImageVector, value: String, label: String) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Icon(icon, contentDescription = label, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(24.dp))
         Spacer(modifier = Modifier.height(4.dp))
-
-        Text(
-            text = value,
-            style = MaterialTheme.typography.titleLarge,
-            fontWeight = FontWeight.Bold
-        )
-
-        Text(
-            text = label,
-            style = MaterialTheme.typography.bodySmall
-        )
+        Text(value, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+        Text(label, style = MaterialTheme.typography.bodySmall)
     }
 }
 
 @Composable
-fun ExerciseItem(
-    exercise: Exercise,
-    index: Int
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        // Número do exercício
-        Box(
-            modifier = Modifier
-                .size(36.dp)
-                .background(MaterialTheme.colorScheme.primary, CircleShape),
-            contentAlignment = Alignment.Center
-        ) {
-            Text(
-                text = index.toString(),
-                color = MaterialTheme.colorScheme.onPrimary,
-                style = MaterialTheme.typography.titleMedium
-            )
-        }
-
-        Spacer(modifier = Modifier.width(16.dp))
-
-        // Informações do exercício
-        Column(
-            modifier = Modifier.weight(1f)
-        ) {
-            Text(
-                text = exercise.name,
-                style = MaterialTheme.typography.titleMedium
-            )
-
-            Text(
-                text = exercise.description,
-                style = MaterialTheme.typography.bodyMedium
-            )
-
-            Spacer(modifier = Modifier.height(4.dp))
-
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                Text(
-                    text = "${exercise.sets} séries",
-                    style = MaterialTheme.typography.bodySmall
-                )
-
-                Text(
-                    text = "${exercise.reps} repetições",
-                    style = MaterialTheme.typography.bodySmall
-                )
-
-                Text(
-                    text = "${exercise.weight} kg",
-                    style = MaterialTheme.typography.bodySmall
-                )
-            }
-        }
-
-        // Imagem do exercício
+fun ExerciseItem(exercise: Exercise, index: Int) {
+    Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        Text(
+            text = "$index.",
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.width(30.dp)
+        )
         Image(
             painter = painterResource(id = exercise.exercisePicture),
             contentDescription = exercise.name,
@@ -539,17 +244,21 @@ fun ExerciseItem(
                 .clip(RoundedCornerShape(8.dp)),
             contentScale = ContentScale.Crop
         )
+        Spacer(modifier = Modifier.width(16.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(exercise.name, style = MaterialTheme.typography.titleMedium)
+            Text("${exercise.sets} séries x ${exercise.reps} reps", style = MaterialTheme.typography.bodyMedium)
+            // Optionally show weight: Text("${exercise.weight} kg", style = MaterialTheme.typography.bodySmall)
+        }
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun RelatedWorkoutItem(
-    workout: WorkoutItem,
-    onClick: () -> Unit
-) {
+fun RelatedWorkoutCard(workout: WorkoutRoutine, onClick: () -> Unit) {
     Card(
         modifier = Modifier
-            .width(160.dp)
+            .width(160.dp) // Fixed width for horizontal scroll
             .clickable(onClick = onClick),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
@@ -559,35 +268,12 @@ fun RelatedWorkoutItem(
                 contentDescription = workout.name,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(100.dp),
+                    .height(90.dp),
                 contentScale = ContentScale.Crop
             )
-
-            Column(
-                modifier = Modifier.padding(8.dp)
-            ) {
-                Text(
-                    text = workout.name,
-                    style = MaterialTheme.typography.titleSmall,
-                    maxLines = 1
-                )
-
-                Spacer(modifier = Modifier.height(4.dp))
-
-                Row(
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Timer,
-                        contentDescription = "Duração",
-                        modifier = Modifier.size(12.dp)
-                    )
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text(
-                        text = "${workout.duration} min",
-                        style = MaterialTheme.typography.bodySmall
-                    )
-                }
+            Column(modifier = Modifier.padding(8.dp)) {
+                Text(workout.name, style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text("${workout.duration} min", style = MaterialTheme.typography.bodySmall)
             }
         }
     }

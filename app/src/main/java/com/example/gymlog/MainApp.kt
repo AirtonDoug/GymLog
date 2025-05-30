@@ -4,7 +4,6 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -23,28 +22,33 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            MainApp()
+            // Elevate the theme state management here
+            var isDarkTheme by remember { mutableStateOf(false) } // Start with light or check system preference
+
+            // Provide a function to toggle the theme
+            val toggleTheme: () -> Unit = { isDarkTheme = !isDarkTheme }
+
+            // Pass the state and the toggle function down
+            MainApp(darkTheme = isDarkTheme, onThemeToggle = toggleTheme)
         }
     }
 }
 
 @Composable
-fun MainApp() {
-    // 1. Chame a função @Composable isSystemInDarkTheme() aqui, no escopo do MainApp.
-    val systemIsInDarkTheme = isSystemInDarkTheme()
-
-    // 2. Use o resultado (que é um Boolean) para inicializar o mutableStateOf.
-    //    O bloco de 'remember' agora usa um valor booleano já resolvido,
-    //    e não uma chamada a uma função composable.
-    var isDarkTheme by remember { mutableStateOf(systemIsInDarkTheme) }
-
-    GymLogTheme(darkTheme = isDarkTheme) {
+fun MainApp(darkTheme: Boolean, onThemeToggle: () -> Unit) {
+    // Apply the theme based on the state passed from MainActivity
+    GymLogTheme(darkTheme = darkTheme) {
         Surface(
             modifier = Modifier.fillMaxSize(),
             color = MaterialTheme.colorScheme.background
         ) {
             val navController = rememberNavController()
-            AppNavigation(navController = navController)
+            // Pass the theme state and toggle function to the Navigation composable
+            AppNavigation(
+                navController = navController,
+                isDarkTheme = darkTheme,
+                onThemeToggle = onThemeToggle
+            )
         }
     }
 }

@@ -12,14 +12,13 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import coil.compose.AsyncImage
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
-import com.example.gymlog.models.WorkoutItem
-import com.example.gymlog.models.mockWorkouts
+import com.example.gymlog.models.WorkoutRoutine // Corrected import
+import com.example.gymlog.models.mockWorkoutRoutines // Corrected import
 import com.example.gymlog.ui.components.BottomNavigationBar
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -28,8 +27,8 @@ fun HomeScreen(
     navController: NavController,
     searchQuery: String = "",
     onSearchQueryChange: (String) -> Unit,
-    isDarkTheme: Boolean,
-    onThemeToggle: () -> Unit
+    isDarkTheme: Boolean, // Keep theme props if needed elsewhere
+    onThemeToggle: () -> Unit // Keep theme props if needed elsewhere
 ) {
     var showMenu by remember { mutableStateOf(false) }
 
@@ -38,14 +37,15 @@ fun HomeScreen(
             TopAppBar(
                 title = { Text("Gym Log") },
                 actions = {
-                    // Campo de busca
+                    // Campo de busca (Simplified for now, can be extracted)
+                    // Consider moving search logic/state up if needed across screens
                     OutlinedTextField(
                         value = searchQuery,
                         onValueChange = onSearchQueryChange,
                         modifier = Modifier
                             .fillMaxWidth(0.6f)
                             .padding(end = 8.dp),
-                        placeholder = { Text("Buscar treinos...") },
+                        placeholder = { Text("Buscar rotinas...") }, // Updated placeholder
                         singleLine = true,
                         leadingIcon = {
                             Icon(
@@ -62,7 +62,8 @@ fun HomeScreen(
                                     )
                                 }
                             }
-                        }
+                        },
+
                     )
 
                     // Menu de três pontinhos
@@ -124,10 +125,11 @@ fun HomeScreen(
             BottomNavigationBar(navController = navController)
         }
     ) { innerPadding ->
+        // Filter WorkoutRoutines based on search query
         val filteredWorkouts = if (searchQuery.isEmpty()) {
-            mockWorkouts
+            mockWorkoutRoutines
         } else {
-            mockWorkouts.filter {
+            mockWorkoutRoutines.filter {
                 it.name.contains(searchQuery, ignoreCase = true) ||
                         it.description.contains(searchQuery, ignoreCase = true) ||
                         it.category.contains(searchQuery, ignoreCase = true) ||
@@ -143,10 +145,11 @@ fun HomeScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp),
             contentPadding = PaddingValues(vertical = 16.dp)
         ) {
-            items(filteredWorkouts) { workout ->
+            // Display WorkoutRoutine cards
+            items(filteredWorkouts, key = { it.id }) { routine -> // Use key = { it.id }
                 WorkoutCard(
-                    workout = workout,
-                    onClick = { navController.navigate("workout_details/${workout.id}") }
+                    workout = routine, // Pass WorkoutRoutine
+                    onClick = { navController.navigate("workout_details/${routine.id}") } // Navigate to routine details
                 )
             }
         }
@@ -156,7 +159,7 @@ fun HomeScreen(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun WorkoutCard(
-    workout: WorkoutItem,
+    workout: WorkoutRoutine, // Corrected type
     onClick: () -> Unit
 ) {
     Card(
@@ -167,20 +170,13 @@ fun WorkoutCard(
     ) {
         Column {
             // Imagem do treino
-
-
-
-            AsyncImage(
-                model = workout.image, // O 'model' pode ser o ID do recurso (ex: R.drawable.nome_da_imagem)
-                // ou uma URL em String, um File, etc.
+            Image(
+                painter = painterResource(id = workout.image),
                 contentDescription = workout.name,
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(180.dp),
-                contentScale = ContentScale.Crop // contentScale funciona da mesma forma
-                // Você pode adicionar outros parâmetros úteis do AsyncImage se precisar, como:
-                // placeholder = painterResource(id = R.drawable.placeholder_image), // Imagem enquanto carrega
-                // error = painterResource(id = R.drawable.error_image), // Imagem em caso de erro
+                contentScale = ContentScale.Crop
             )
 
             // Informações do treino
@@ -197,6 +193,7 @@ fun WorkoutCard(
                         style = MaterialTheme.typography.headlineSmall
                     )
 
+                    // Display favorite icon if the routine is favorited
                     if (workout.isFavorite) {
                         Icon(
                             imageVector = Icons.Default.Favorite,
@@ -221,46 +218,31 @@ fun WorkoutCard(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            imageVector = Icons.Default.Timer,
-                            contentDescription = "Duração",
-                            modifier = Modifier.size(16.dp)
-                        )
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(
-                            text = "${workout.duration} min",
-                            style = MaterialTheme.typography.bodySmall
-                        )
-                    }
-
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            imageVector = Icons.Default.FitnessCenter,
-                            contentDescription = "Categoria",
-                            modifier = Modifier.size(16.dp)
-                        )
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(
-                            text = workout.category,
-                            style = MaterialTheme.typography.bodySmall
-                        )
-                    }
-
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            imageVector = Icons.Default.Speed,
-                            contentDescription = "Dificuldade",
-                            modifier = Modifier.size(16.dp)
-                        )
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(
-                            text = workout.difficulty,
-                            style = MaterialTheme.typography.bodySmall
-                        )
-                    }
+                    // Use StatRowSmall or similar component if defined elsewhere
+                    StatRowSmall(icon = Icons.Default.Timer, value = "${workout.duration} min")
+                    StatRowSmall(icon = Icons.Default.FitnessCenter, value = workout.category)
+                    StatRowSmall(icon = Icons.Default.Speed, value = workout.difficulty)
                 }
             }
         }
     }
 }
+
+// Ensure StatRowSmall is defined or import it if it's in another file
+/* @Composable
+fun StatRowSmall(icon: androidx.compose.ui.graphics.vector.ImageVector, value: String) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            modifier = Modifier.size(14.dp),
+            tint = MaterialTheme.colorScheme.secondary
+        )
+        Spacer(modifier = Modifier.width(4.dp))
+        Text(
+            text = value,
+            style = MaterialTheme.typography.labelMedium
+        )
+    }
+} */
+

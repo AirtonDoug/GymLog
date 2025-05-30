@@ -17,15 +17,15 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
-import com.example.gymlog.models.WorkoutItem
+import com.example.gymlog.models.WorkoutRoutine // Corrected import
 import com.example.gymlog.ui.components.BottomNavigationBar
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FavoritesScreen(
     navController: NavController,
-    favoriteWorkouts: List<WorkoutItem>,
-    onRemoveFavorite: (WorkoutItem) -> Unit
+    favoriteWorkouts: List<WorkoutRoutine>, // Corrected type
+    onRemoveFavorite: (WorkoutRoutine) -> Unit // Corrected type
 ) {
     var showMenu by remember { mutableStateOf(false) }
 
@@ -145,7 +145,7 @@ fun FavoritesScreen(
                 verticalArrangement = Arrangement.spacedBy(16.dp),
                 contentPadding = PaddingValues(vertical = 16.dp)
             ) {
-                items(favoriteWorkouts) { workout ->
+                items(favoriteWorkouts, key = { it.id }) { workout -> // Use key = { it.id }
                     FavoriteWorkoutCard(
                         workout = workout,
                         onClick = { navController.navigate("workout_details/${workout.id}") },
@@ -160,7 +160,7 @@ fun FavoritesScreen(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FavoriteWorkoutCard(
-    workout: WorkoutItem,
+    workout: WorkoutRoutine, // Corrected type
     onClick: () -> Unit,
     onRemove: () -> Unit
 ) {
@@ -234,6 +234,7 @@ fun FavoriteWorkoutCard(
                         )
                         Spacer(modifier = Modifier.width(4.dp))
                         Text(
+                            // Ensure duration is treated as Int/String correctly
                             text = "${workout.duration} min",
                             style = MaterialTheme.typography.bodySmall
                         )
