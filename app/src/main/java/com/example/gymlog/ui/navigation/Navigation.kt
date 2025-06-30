@@ -8,77 +8,44 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.ViewModelProvider
-import androidx.lifecycle.viewmodel.compose.viewModel // Import viewModel
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
-import com.example.gymlog.data.repositories.MockWorkoutRepository // Temporary for factories
+import com.example.gymlog.data.repositories.MockWorkoutRepository
 import com.example.gymlog.ui.screens.*
-import com.example.gymlog.ui.viewmodel.*
-
-// Basic ViewModel Factory (replace with proper DI later)
-// You might want to move these factories to a dedicated file or use a DI framework
-class FavoritesViewModelFactory : ViewModelProvider.Factory {
-    @Suppress("UNCHECKED_CAST")
-    override fun <T : ViewModel> create(modelClass: Class<T>): T {
-        if (modelClass.isAssignableFrom(FavoritesViewModel::class.java)) {
-            // In a real app, use Hilt or another DI framework to provide the repository
-            return FavoritesViewModel(MockWorkoutRepository()) as T
-        }
-        throw IllegalArgumentException("Unknown ViewModel class")
-    }
-}
-
-class WorkoutDetailViewModelFactory(private val workoutId: Int) : ViewModelProvider.Factory {
-    @Suppress("UNCHECKED_CAST")
-    override fun <T : ViewModel> create(modelClass: Class<T>): T {
-        if (modelClass.isAssignableFrom(WorkoutDetailViewModel::class.java)) {
-            // In a real app, you would pass SavedStateHandle here,
-            // but viewModel() handles it. We pass the ID differently for simplicity here.
-            // A better approach uses Hilt or manual SavedStateHandle injection.
-            val fakeSavedStateHandle = SavedStateHandle(mapOf("workoutId" to workoutId))
-            return WorkoutDetailViewModel(fakeSavedStateHandle, MockWorkoutRepository()) as T
-        }
-        throw IllegalArgumentException("Unknown ViewModel class")
-    }
-}
+import com.example.gymlog.ui.viewmodel.SearchViewModel
 
 @Composable
 fun AppNavigation(
     navController: NavHostController,
-    // Theme state is still managed at a higher level (MainActivity/MainApp)
     isDarkTheme: Boolean,
     onThemeToggle: () -> Unit
 ) {
-    // State like searchQuery and favorites is now managed within ViewModels.
-    // No need for remember { mutableStateOf(...) } here for that.
+    // Create a shared repository instance for all ViewModels
+    val repository = MockWorkoutRepository()
 
     NavHost(navController = navController, startDestination = "home") {
         composable("home") {
-            // HomeScreen gets its ViewModel via viewModel()
+            // Let HomeScreen create its own ViewModel
             HomeScreen(navController = navController)
-            // Theme props could be passed if needed for components outside ViewModel scope
-            // isDarkTheme = isDarkTheme,
-            // onThemeToggle = onThemeToggle
         }
 
         composable("log") {
-            // TODO: Create LogViewModel and refactor LogScreen
+            // Let LogScreen create its own ViewModel
             LogScreen(navController = navController)
         }
 
         composable("profile") {
-            // TODO: Create ProfileViewModel and refactor ProfileScreen
+            // Let ProfileScreen create its own ViewModel
             ProfileScreen(navController = navController)
         }
 
         composable("start_workout") {
-            // TODO: Create StartWorkoutViewModel and refactor StartWorkoutScreen
+            // Let StartWorkoutScreen create its own ViewModel
             StartWorkoutScreen(navController = navController)
         }
 
@@ -87,78 +54,71 @@ fun AppNavigation(
             arguments = listOf(navArgument("workoutIdOrCustom") { type = NavType.StringType })
         ) { backStackEntry ->
             val workoutIdOrCustom = backStackEntry.arguments?.getString("workoutIdOrCustom") ?: "custom"
-            // TODO: Create ActiveWorkoutViewModel and refactor ActiveWorkoutScreen
-            ActiveWorkoutScreen(navController = navController, workoutIdOrCustom = workoutIdOrCustom)
+
+            // Pass only the required parameters
+            ActiveWorkoutScreen(
+                navController = navController,
+                workoutIdOrCustom = workoutIdOrCustom
+            )
         }
 
         composable(
             route = "workout_details/{workoutId}",
             arguments = listOf(navArgument("workoutId") { type = NavType.IntType })
         ) { backStackEntry ->
-            // WorkoutDetailScreen gets its ViewModel via viewModel(),
-            // which automatically handles SavedStateHandle for arguments.
-            // TODO: Implement WorkoutDetailScreen properly with ViewModel
+            val workoutId = backStackEntry.arguments?.getInt("workoutId") ?: -1
+
+            // Let WorkoutDetailScreen create its own ViewModel
             WorkoutDetailScreen(
                 navController = navController,
-                workoutRoutine = TODO(), // Needs data from WorkoutDetailViewModel
-                isFavorite = TODO(),     // Needs data from WorkoutDetailViewModel
-                onToggleFavorite = TODO(), // Needs action from WorkoutDetailViewModel
-                workoutId = backStackEntry.arguments?.getInt("workoutId") ?: -1 // Pass the ID
+                workoutId = workoutId
             )
         }
 
         composable("favorites") {
-            // Instantiate FavoritesViewModel using the factory (or Hilt in a real app)
-            val favoritesViewModel: FavoritesViewModel = viewModel(factory = FavoritesViewModelFactory())
-            // Collect the UI state from the ViewModel
-            val uiState by favoritesViewModel.uiState.collectAsState()
-
-            // Pass the collected state and the remove function to the screen
-            FavoritesScreen(
-                navController = navController,
-                favoriteWorkouts = uiState.favoriteRoutines, // Pass the list from state
-                onRemoveFavorite = { routine -> favoritesViewModel.removeFavorite(routine) } // Pass the remove function
-            )
+            // Let FavoritesScreen create its own ViewModel
+            FavoritesScreen(navController = navController)
         }
 
         composable("settings") {
-            // SettingsScreen might need its own ViewModel too, especially for clearing favorites
-            // For now, passing callbacks might be acceptable if logic is simple
-            // TODO: Create SettingsViewModel and refactor SettingsScreen
-            // val settingsViewModel: SettingsViewModel = viewModel(...)
+            // Pass only the required parameters
             SettingsScreen(
                 navController = navController,
                 isDarkTheme = isDarkTheme,
                 onThemeToggle = onThemeToggle,
-                // TODO: Replace these with ViewModel actions
-                onClearFavorites = { /* settingsViewModel.clearFavorites() */ },
-                onResetPreferences = { /* settingsViewModel.resetPreferences() */ }
+                onClearFavorites = { /* Will be handled by ViewModel */ },
+                onResetPreferences = { /* Will be handled by ViewModel */ }
             )
         }
 
         composable("search") {
-            // Search results can be part of HomeViewModel or a dedicated SearchViewModel
-            // Reusing HomeViewModel state for simplicity here
-            // val homeViewModel: HomeViewModel = viewModel() // Get potentially shared VM
-            // val uiState by homeViewModel.uiState.collectAsStateWithLifecycle()
-            // val searchQuery by homeViewModel.searchQuery.collectAsStateWithLifecycle()
+            // Create SearchViewModel with factory
+            val searchViewModel: SearchViewModel = viewModel(
+                factory = object : androidx.lifecycle.ViewModelProvider.Factory {
+                    @Suppress("UNCHECKED_CAST")
+                    override fun <T : ViewModel> create(modelClass: Class<T>): T {
+                        return SearchViewModel(repository) as T
+                    }
+                }
+            )
 
-            // TODO: Refactor SearchResultsScreen to use ViewModel
-            /* SearchResultsScreen(
+            // Collect state from ViewModel
+            val uiState by searchViewModel.uiState.collectAsState()
+
+            // Pass all required parameters to SearchResultsScreen
+            SearchResultsScreen(
                 navController = navController,
-                searchQuery = searchQuery,
-                searchResults = uiState.routines, // Use routines from HomeViewModel state
-                onSearchQueryChange = { homeViewModel.onSearchQueryChange(it) },
-                favoriteRoutineIds = uiState.routines.filter { it.isFavorite }.map { it.id }.toSet(), // Derive from state
-                onToggleFavorite = { homeViewModel.toggleFavorite(it) }
-            ) */
-            Column (Modifier.padding(16.dp)) { Text("Tela de Busca (Refatoração Pendente)") }
+                searchQuery = uiState.searchQuery,
+                searchResults = uiState.searchResults,
+                onSearchQueryChange = { searchViewModel.onSearchQueryChange(it) },
+                favoriteRoutineIds = uiState.searchResults.filter { it.isFavorite }.map { it.id }.toSet(),
+                onToggleFavorite = { searchViewModel.toggleFavorite(it) }
+            )
         }
 
         composable("help") {
-            // TODO: Create HelpViewModel and refactor HelpScreen if needed
+            // Let HelpScreen create its own ViewModel
             HelpScreen(navController = navController)
         }
     }
 }
-
