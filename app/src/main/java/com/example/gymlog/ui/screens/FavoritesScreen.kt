@@ -16,25 +16,30 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewmodel.compose.viewModel // Import viewModel
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import com.example.gymlog.data.repositories.MockWorkoutRepository
 import com.example.gymlog.models.WorkoutRoutine
 import com.example.gymlog.ui.components.BottomNavigationBar
 import com.example.gymlog.ui.viewmodel.FavoritesViewModel
-import com.example.gymlog.ui.navigation.FavoritesViewModelFactory // Assuming factory is in navigation package
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FavoritesScreen(
-    navController: NavController,
-    // Inject ViewModel
-    favoritesViewModel: FavoritesViewModel = viewModel(factory = FavoritesViewModelFactory()),
-    favoriteWorkouts: List<WorkoutRoutine>,
-    onRemoveFavorite: (Any) -> Unit
+    navController: NavController
 ) {
+    // Create ViewModel directly with repository
+    val favoritesViewModel: FavoritesViewModel = viewModel(
+        factory = object : androidx.lifecycle.ViewModelProvider.Factory {
+            @Suppress("UNCHECKED_CAST")
+            override fun <T : androidx.lifecycle.ViewModel> create(modelClass: Class<T>): T {
+                return FavoritesViewModel(MockWorkoutRepository()) as T
+            }
+        }
+    )
+
     // Collect state from ViewModel
-    val uiState by favoritesViewModel.uiState.collectAsStateWithLifecycle()
+    val uiState by favoritesViewModel.uiState.collectAsState()
 
     var showMenu by remember { mutableStateOf(false) }
 

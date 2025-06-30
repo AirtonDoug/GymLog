@@ -16,8 +16,14 @@ data class FavoritesUiState(
 
 class FavoritesViewModel(private val workoutRepository: WorkoutRepository) : ViewModel() {
 
+    // Expose UI state as StateFlow
     val uiState: StateFlow<FavoritesUiState> = workoutRepository.getFavoriteWorkoutRoutines()
-        .map { routines -> FavoritesUiState(favoriteRoutines = routines, isLoading = false) }
+        .map { favorites ->
+            FavoritesUiState(
+                favoriteRoutines = favorites,
+                isLoading = false
+            )
+        }
         .catch { e ->
             emit(FavoritesUiState(isLoading = false, errorMessage = "Failed to load favorites: ${e.message}"))
         }
@@ -27,15 +33,26 @@ class FavoritesViewModel(private val workoutRepository: WorkoutRepository) : Vie
             initialValue = FavoritesUiState(isLoading = true)
         )
 
-    fun removeFavorite(routine: Any) {
+    // Remove a routine from favorites
+    fun removeFavorite(routine: WorkoutRoutine) {
         viewModelScope.launch {
             try {
-                // Toggle favorite will remove it if it's already a favorite
-                workoutRepository.toggleFavorite(routine)
+                workoutRepository.toggleFavorite(routine.id)
+                // UI will update automatically via the StateFlow
             } catch (e: Exception) {
-                // Handle error
-                // Consider updating UI state with an error message
+                // Handle error if needed
             }
         }
+    }
+}
+
+// Factory for creating FavoritesViewModel
+class FavoritesViewModelFactory(private val repository: WorkoutRepository = com.example.gymlog.data.repositories.MockWorkoutRepository()) : androidx.lifecycle.ViewModelProvider.Factory {
+    @Suppress("UNCHECKED_CAST")
+    override fun <T : androidx.lifecycle.ViewModel> create(modelClass: Class<T>): T {
+        if (modelClass.isAssignableFrom(FavoritesViewModel::class.java)) {
+            return FavoritesViewModel(repository) as T
+        }
+        throw IllegalArgumentException("Unknown ViewModel class")
     }
 }

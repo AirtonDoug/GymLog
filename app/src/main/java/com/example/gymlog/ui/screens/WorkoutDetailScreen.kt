@@ -22,33 +22,34 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewmodel.compose.viewModel // Import viewModel
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import com.example.gymlog.data.repositories.MockWorkoutRepository
 import com.example.gymlog.models.Exercise
 import com.example.gymlog.models.WorkoutRoutine
-import com.example.gymlog.models.mockWorkoutRoutines // Keep using mock data for related items
+import com.example.gymlog.models.mockWorkoutRoutines
 import com.example.gymlog.ui.components.BottomNavigationBar
 import com.example.gymlog.ui.viewmodel.WorkoutDetailViewModel
-import com.example.gymlog.ui.navigation.WorkoutDetailViewModelFactory // Assuming factory is in navigation
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun WorkoutDetailScreen(
     navController: NavController,
-    // Inject ViewModel - workoutId is handled by SavedStateHandle within ViewModel
-    detailViewModel: WorkoutDetailViewModel = viewModel(
-        factory = WorkoutDetailViewModelFactory(
-            navController.currentBackStackEntry?.arguments?.getInt("workoutId") ?: -1
-        )
-    ), // Pass ID to factory if needed
-    workoutRoutine: Nothing,
-    isFavorite: Nothing,
-    onToggleFavorite: Nothing,
     workoutId: Int
 ) {
+    // Create ViewModel directly with repository
+    val detailViewModel: WorkoutDetailViewModel = viewModel(
+        factory = object : androidx.lifecycle.ViewModelProvider.Factory {
+            @Suppress("UNCHECKED_CAST")
+            override fun <T : androidx.lifecycle.ViewModel> create(modelClass: Class<T>): T {
+                val savedStateHandle = androidx.lifecycle.SavedStateHandle(mapOf("workoutId" to workoutId))
+                return WorkoutDetailViewModel(savedStateHandle, MockWorkoutRepository()) as T
+            }
+        }
+    )
+
     // Collect state from ViewModel
-    val uiState by detailViewModel.uiState.collectAsStateWithLifecycle()
+    val uiState by detailViewModel.uiState.collectAsState()
 
     var isPlaying by remember { mutableStateOf(false) } // Local state for media player UI
     var showMenu by remember { mutableStateOf(false) }
