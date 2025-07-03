@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.gymlog.data.repositories.WorkoutRepository
 import com.example.gymlog.models.WorkoutRoutine
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
@@ -19,6 +20,7 @@ class FavoritesViewModel(private val workoutRepository: WorkoutRepository) : Vie
     // Expose UI state as StateFlow
     val uiState: StateFlow<FavoritesUiState> = workoutRepository.getFavoriteWorkoutRoutines()
         .map { favorites ->
+            delay(1500)
             FavoritesUiState(
                 favoriteRoutines = favorites,
                 isLoading = false

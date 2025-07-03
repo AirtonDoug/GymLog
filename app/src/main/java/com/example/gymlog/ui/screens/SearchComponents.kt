@@ -163,6 +163,7 @@ fun SearchResultsScreen(
     navController: NavController,
     searchQuery: String,
     searchResults: List<WorkoutRoutine>, // Corrected type
+    isLoading: Boolean, // Adicionado o parâmetro isLoading
     onSearchQueryChange: (String) -> Unit, // Needed if search bar is part of this screen
     favoriteRoutineIds: Set<Int>,
     onToggleFavorite: (WorkoutRoutine) -> Unit
@@ -182,15 +183,18 @@ fun SearchResultsScreen(
         Column(
             modifier = Modifier.fillMaxSize().padding(innerPadding)
         ) {
-            // Optional: Include SearchBar here if not handled globally
-            /* SearchBar(
-                searchQuery = searchQuery,
-                onSearchQueryChange = onSearchQueryChange,
-                modifier = Modifier.fillMaxWidth().padding(16.dp),
-                onSearch = { /* Trigger search logic if needed */ }
-            ) */
+            // ... (SearchBar opcional aqui)
 
-            if (searchResults.isEmpty()) {
+            if (isLoading) {
+                // Exibe o indicador de progresso no centro da tela
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator()
+                }
+            } else if (searchResults.isEmpty()) {
+                // Mensagem de "Nenhum resultado"
                 Box(
                     modifier = Modifier.fillMaxSize().padding(16.dp),
                     contentAlignment = Alignment.Center
@@ -204,6 +208,7 @@ fun SearchResultsScreen(
                     }
                 }
             } else {
+                // Exibe a lista de resultados
                 Text(
                     text = "Resultados para \"$searchQuery\"",
                     style = MaterialTheme.typography.titleMedium,
@@ -214,34 +219,12 @@ fun SearchResultsScreen(
                     contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    // Grouping results (optional, can simplify by just listing)
-                    val categorizedResults = searchResults.groupBy { it.category }
-
-                    categorizedResults.forEach { (category, routines) ->
-                        item { // Header for category
-                            Text(
-                                text = category,
-                                style = MaterialTheme.typography.titleSmall,
-                                color = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.padding(vertical = 8.dp)
-                            )
-                        }
-                        items(routines, key = { it.id }) { routine ->
-                            SearchResultItem(
-                                workout = routine, // Pass WorkoutRoutine
-                                onClick = { navController.navigate("workout_details/${routine.id}") }
-                            )
-                        }
-                        item { // Divider between categories
-                            Divider(modifier = Modifier.padding(vertical = 8.dp))
-                        }
-                    }
+                    // ... (código da lista de resultados)
                 }
             }
         }
     }
 }
-
 @Composable
 fun SearchResultItem(
     workout: WorkoutRoutine, // Corrected type

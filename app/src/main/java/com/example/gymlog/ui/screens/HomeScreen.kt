@@ -17,13 +17,13 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewmodel.compose.viewModel // Import viewModel
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.example.gymlog.models.WorkoutRoutine
 import com.example.gymlog.ui.components.BottomNavigationBar
-import com.example.gymlog.ui.components.StatRowSmall // Assuming StatRowSmall is defined
+import com.example.gymlog.ui.components.StatRowSmall
 import com.example.gymlog.ui.viewmodel.HomeViewModel
-import com.example.gymlog.data.repositories.MockWorkoutRepository // Temp import for factory
+import com.example.gymlog.data.repositories.MockWorkoutRepository
 
 // Basic ViewModel Factory (replace with proper DI later)
 class HomeViewModelFactory : androidx.lifecycle.ViewModelProvider.Factory {
@@ -114,9 +114,8 @@ fun HomeScreen(
                     items(uiState.routines, key = { it.id }) { routine ->
                         WorkoutCard(
                             workout = routine,
-                            // isFavorite is now part of the WorkoutRoutine from the ViewModel/Repository flow
                             isFavorite = routine.isFavorite,
-                            // Pass the ViewModel toggle function directly
+                            isFavoriting = uiState.favoritingInProgress.contains(routine.id),
                             onToggleFavorite = { homeViewModel.toggleFavorite(routine) },
                             onClick = { navController.navigate("workout_details/${routine.id}") }
                         )
@@ -127,12 +126,13 @@ fun HomeScreen(
     }
 }
 
-// WorkoutCard remains largely the same, receiving isFavorite and onToggleFavorite
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun WorkoutCard(
     workout: WorkoutRoutine,
     isFavorite: Boolean,
+    isFavoriting: Boolean, // Novo parâmetro
     onToggleFavorite: () -> Unit,
     onClick: () -> Unit
 ) {
@@ -154,6 +154,7 @@ fun WorkoutCard(
                 )
                 IconButton(
                     onClick = onToggleFavorite,
+                    enabled = !isFavoriting, // Desabilita o botão durante o carregamento
                     modifier = Modifier
                         .align(Alignment.TopEnd)
                         .padding(8.dp)
@@ -163,11 +164,18 @@ fun WorkoutCard(
                             shape = androidx.compose.foundation.shape.CircleShape
                         )
                 ) {
-                    Icon(
-                        imageVector = if (isFavorite) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
-                        contentDescription = if (isFavorite) "Remover dos Favoritos" else "Adicionar aos Favoritos",
-                        tint = if (isFavorite) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                    if (isFavoriting) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(24.dp),
+                            strokeWidth = 2.dp
+                        )
+                    } else {
+                        Icon(
+                            imageVector = if (isFavorite) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
+                            contentDescription = if (isFavorite) "Remover dos Favoritos" else "Adicionar aos Favoritos",
+                            tint = if (isFavorite) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                 }
             }
             Column(modifier = Modifier.padding(16.dp)) {

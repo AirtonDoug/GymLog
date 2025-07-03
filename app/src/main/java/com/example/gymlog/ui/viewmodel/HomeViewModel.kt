@@ -1,9 +1,12 @@
+
+
 package com.example.gymlog.ui.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.gymlog.data.repositories.WorkoutRepository
 import com.example.gymlog.models.WorkoutRoutine
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
@@ -12,7 +15,8 @@ data class HomeUiState(
     val routines: List<WorkoutRoutine> = emptyList(),
     val searchQuery: String = "",
     val isLoading: Boolean = true,
-    val errorMessage: String? = null
+    val errorMessage: String? = null,
+    val favoritingInProgress: Set<Int> = emptySet() // IDs das rotinas sendo favoritadas
 )
 
 class HomeViewModel(private val workoutRepository: WorkoutRepository) : ViewModel() {
@@ -20,11 +24,15 @@ class HomeViewModel(private val workoutRepository: WorkoutRepository) : ViewMode
     private val _searchQuery = MutableStateFlow("")
     val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
 
+    private val _favoritingInProgress = MutableStateFlow<Set<Int>>(emptySet())
+
     // Combine routines flow with search query flow to get filtered results
     val uiState: StateFlow<HomeUiState> = combine(
         workoutRepository.getWorkoutRoutines(), // Gets routines with updated favorite status
-        _searchQuery
-    ) { routines, query ->
+        _searchQuery,
+        _favoritingInProgress
+    ) { routines, query, favoritingIds ->
+        delay(1500) // Simula o atraso de rede
         val filteredRoutines = if (query.isBlank()) {
             routines
         } else {
@@ -38,7 +46,8 @@ class HomeViewModel(private val workoutRepository: WorkoutRepository) : ViewMode
         HomeUiState(
             routines = filteredRoutines,
             searchQuery = query,
-            isLoading = false // Assuming loading is done once routines are emitted
+            isLoading = false, // Loading is done
+            favoritingInProgress = favoritingIds
         )
     }.catch { e ->
         // Handle errors, e.g., update state with error message
@@ -55,12 +64,14 @@ class HomeViewModel(private val workoutRepository: WorkoutRepository) : ViewMode
 
     fun toggleFavorite(routine: WorkoutRoutine) {
         viewModelScope.launch {
+            _favoritingInProgress.update { it + routine.id }
             try {
+                delay(1000) // Simula o atraso de rede
                 workoutRepository.toggleFavorite(routine.id)
-                // StateFlow will automatically update the UI as getWorkoutRoutines() emits new list
             } catch (e: Exception) {
-                // Handle error, maybe update UI state with an error message
-                // _uiState.update { it.copy(errorMessage = "Failed to update favorite: ${e.message}") }
+                // Handle error
+            } finally {
+                _favoritingInProgress.update { it - routine.id }
             }
         }
     }

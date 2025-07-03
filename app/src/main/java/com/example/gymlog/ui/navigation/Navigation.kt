@@ -110,11 +110,13 @@ fun AppNavigation(
                 navController = navController,
                 searchQuery = uiState.searchQuery,
                 searchResults = uiState.searchResults,
+                isLoading = uiState.isLoading, // Passe o estado de carregamento
                 onSearchQueryChange = { searchViewModel.onSearchQueryChange(it) },
                 favoriteRoutineIds = uiState.searchResults.filter { it.isFavorite }.map { it.id }.toSet(),
                 onToggleFavorite = { searchViewModel.toggleFavorite(it) }
             )
         }
+
 
         composable("help") {
             // Let HelpScreen create its own ViewModel

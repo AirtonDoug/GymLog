@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.gymlog.data.repositories.WorkoutRepository
 import com.example.gymlog.models.WorkoutRoutine
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
@@ -41,6 +42,7 @@ class WorkoutDetailViewModel(
     private fun loadWorkoutDetails() {
         viewModelScope.launch {
             try {
+                delay(1500)
                 workoutRepository.getWorkoutRoutineById(workoutId).collect { routine ->
                     if (routine != null) {
                         _uiState.update {
