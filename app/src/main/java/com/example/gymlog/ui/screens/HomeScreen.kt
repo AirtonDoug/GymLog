@@ -17,14 +17,16 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.lifecycle.ViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import com.example.gymlog.data.repositories.MockWorkoutRepository
 import com.example.gymlog.models.WorkoutRoutine
 import com.example.gymlog.ui.components.BottomNavigationBar
 import com.example.gymlog.ui.components.StatRowSmall
+import com.example.gymlog.ui.theme.Michroma // Importe a fonte Michroma
 import com.example.gymlog.ui.viewmodel.HomeViewModel
-import com.example.gymlog.data.repositories.MockWorkoutRepository
 
 // Basic ViewModel Factory (replace with proper DI later)
 class HomeViewModelFactory : androidx.lifecycle.ViewModelProvider.Factory {
@@ -42,20 +44,23 @@ class HomeViewModelFactory : androidx.lifecycle.ViewModelProvider.Factory {
 @Composable
 fun HomeScreen(
     navController: NavController,
-    homeViewModel: HomeViewModel // Receba o ViewModel como parâmetro
+    homeViewModel: HomeViewModel
 ) {
-    // O ViewModel agora é injetado, não precisa mais do viewModel()
     val uiState by homeViewModel.uiState.collectAsStateWithLifecycle()
     val searchQuery by homeViewModel.searchQuery.collectAsStateWithLifecycle()
-
     var showMenu by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Gym Log") },
+                title = {
+                    Text(
+                        text = "Gym Log",
+                        fontFamily = Michroma, // <<-- APLICANDO A FONTE MICHROMA
+                        fontSize = 17.sp       // <<-- Ajuste o tamanho como preferir
+                    )
+                },
                 actions = {
-                    // Search Field - CORRIGIDO
                     OutlinedTextField(
                         value = searchQuery,
                         onValueChange = { homeViewModel.onSearchQueryChange(it) },
@@ -63,14 +68,10 @@ fun HomeScreen(
                             .fillMaxWidth(0.65f)
                             .height(50.dp)
                             .padding(end = 8.dp),
-
-                        // Define um estilo de texto menor para melhor alinhamento vertical
                         textStyle = MaterialTheme.typography.bodySmall,
-
                         placeholder = {
                             Text(
                                 "Buscar rotinas...",
-                                // Aplica o mesmo estilo ao placeholder para consistência
                                 style = MaterialTheme.typography.bodySmall
                             )
                         },
@@ -85,7 +86,6 @@ fun HomeScreen(
                         },
                         shape = CircleShape
                     )
-                    // More Options Menu
                     IconButton(onClick = { showMenu = !showMenu }) {
                         Icon(Icons.Default.MoreVert, "Menu")
                     }
@@ -114,7 +114,6 @@ fun HomeScreen(
                 }
             }
             else -> {
-                // Display list when data is available
                 LazyColumn(
                     modifier = Modifier
                         .fillMaxSize()
@@ -138,13 +137,12 @@ fun HomeScreen(
     }
 }
 
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun WorkoutCard(
     workout: WorkoutRoutine,
     isFavorite: Boolean,
-    isFavoriting: Boolean, // Novo parâmetro
+    isFavoriting: Boolean,
     onToggleFavorite: () -> Unit,
     onClick: () -> Unit
 ) {
@@ -166,7 +164,7 @@ fun WorkoutCard(
                 )
                 IconButton(
                     onClick = onToggleFavorite,
-                    enabled = !isFavoriting, // Desabilita o botão durante o carregamento
+                    enabled = !isFavoriting,
                     modifier = Modifier
                         .align(Alignment.TopEnd)
                         .padding(8.dp)

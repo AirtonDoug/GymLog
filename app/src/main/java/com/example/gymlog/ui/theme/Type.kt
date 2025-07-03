@@ -2,9 +2,12 @@ package com.example.gymlog.ui.theme
 
 import androidx.compose.material3.Typography
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
+import com.example.gymlog.R
+
 
 // Set of Material typography styles to start with
 val Typography = Typography(
@@ -14,6 +17,11 @@ val Typography = Typography(
         fontSize = 16.sp,
         lineHeight = 24.sp,
         letterSpacing = 0.5.sp
+    )
+)
+
+    val Michroma = FontFamily(
+        Font(R.font.michroma_regular, FontWeight.Normal)
     )
     /* Other default text styles to override
     titleLarge = TextStyle(
@@ -31,4 +39,3 @@ val Typography = Typography(
         letterSpacing = 0.5.sp
     )
     */
-)
