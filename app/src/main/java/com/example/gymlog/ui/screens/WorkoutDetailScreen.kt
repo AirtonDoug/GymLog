@@ -1,5 +1,7 @@
+
 package com.example.gymlog.ui.screens
 
+import android.app.TimePickerDialog
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -18,6 +20,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -30,6 +33,8 @@ import com.example.gymlog.models.WorkoutRoutine
 import com.example.gymlog.models.mockWorkoutRoutines
 import com.example.gymlog.ui.components.BottomNavigationBar
 import com.example.gymlog.ui.viewmodel.WorkoutDetailViewModel
+import com.example.gymlog.utils.AlarmScheduler
+import java.util.Calendar
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -37,6 +42,7 @@ fun WorkoutDetailScreen(
     navController: NavController,
     workoutId: Int
 ) {
+    val context = LocalContext.current
     // Create ViewModel directly with repository
     val detailViewModel: WorkoutDetailViewModel = viewModel(
         factory = object : androidx.lifecycle.ViewModelProvider.Factory {
@@ -74,6 +80,35 @@ fun WorkoutDetailScreen(
                                 imageVector = if (uiState.isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
                                 contentDescription = if (uiState.isFavorite) "Remover dos favoritos" else "Adicionar aos favoritos",
                                 tint = if (uiState.isFavorite) MaterialTheme.colorScheme.primary else LocalContentColor.current
+                            )
+                        }
+
+                        // Schedule Notification Button
+                        IconButton(onClick = {
+                            val calendar = Calendar.getInstance()
+                            val timePickerDialog = TimePickerDialog(
+                                context,
+                                { _, hourOfDay, minute ->
+                                    val selectedTime = Calendar.getInstance().apply {
+                                        set(Calendar.HOUR_OF_DAY, hourOfDay)
+                                        set(Calendar.MINUTE, minute)
+                                        set(Calendar.SECOND, 0)
+                                    }
+                                    // Garante que o alarme seja para o futuro
+                                    if (selectedTime.before(Calendar.getInstance())) {
+                                        selectedTime.add(Calendar.DATE, 1)
+                                    }
+                                    AlarmScheduler.scheduleAlarm(context, workoutRoutine.name, selectedTime.timeInMillis)
+                                },
+                                calendar.get(Calendar.HOUR_OF_DAY),
+                                calendar.get(Calendar.MINUTE),
+                                true
+                            )
+                            timePickerDialog.show()
+                        }) {
+                            Icon(
+                                imageVector = Icons.Default.Alarm,
+                                contentDescription = "Agendar Notificação"
                             )
                         }
                     }
