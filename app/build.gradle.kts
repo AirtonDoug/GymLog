@@ -44,6 +44,10 @@ android {
 }
 
 dependencies {
+
+    implementation("androidx.datastore:datastore-preferences:1.1.1")
+    implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.9.0")
+    implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.9.0")
     implementation(libs.coil.compose)
     implementation(libs.coil.gif)
     implementation(libs.androidx.core.ktx) // Apenas uma vez, via catalog

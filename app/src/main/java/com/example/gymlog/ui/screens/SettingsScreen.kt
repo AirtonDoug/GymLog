@@ -1,5 +1,6 @@
 package com.example.gymlog.ui.screens
 
+import android.app.Application
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -10,22 +11,31 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import com.example.gymlog.data.repositories.MockWorkoutRepository
+import com.example.gymlog.data.repositories.UserPreferencesRepository
 import com.example.gymlog.ui.components.BottomNavigationBar
+import com.example.gymlog.ui.viewmodel.SettingsViewModel
+import com.example.gymlog.ui.viewmodel.SettingsViewModelFactory
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
     navController: NavController,
-    isDarkTheme: Boolean,
-    onThemeToggle: () -> Unit,
-    onClearFavorites: () -> Unit,
-    onResetPreferences: () -> Unit
 ) {
-    var notificationsEnabled by remember { mutableStateOf(true) }
-    var soundEnabled by remember { mutableStateOf(true) }
-    var autoPlayVideos by remember { mutableStateOf(false) }
+    val context = LocalContext.current
+    val settingsViewModel: SettingsViewModel = viewModel(
+        factory = SettingsViewModelFactory(
+            context.applicationContext as Application,
+            MockWorkoutRepository(),
+            UserPreferencesRepository(context)
+        )
+    )
+    val userPreferences by settingsViewModel.userPreferencesFlow.collectAsState()
+
     var showConfirmDialog by remember { mutableStateOf(false) }
     var dialogAction by remember { mutableStateOf<() -> Unit>({}) }
     var dialogTitle by remember { mutableStateOf("") }
@@ -64,8 +74,8 @@ fun SettingsScreen(
                 title = "Modo Escuro",
                 description = "Ativar tema escuro para o aplicativo",
                 icon = Icons.Default.DarkMode,
-                checked = isDarkTheme,
-                onCheckedChange = { onThemeToggle() }
+                checked = userPreferences.isDarkMode,
+                onCheckedChange = { settingsViewModel.setDarkMode(it) }
             )
 
             Divider(modifier = Modifier.padding(vertical = 8.dp))
@@ -78,31 +88,8 @@ fun SettingsScreen(
                 title = "Notificações",
                 description = "Receber lembretes e atualizações",
                 icon = Icons.Default.Notifications,
-                checked = notificationsEnabled,
-                onCheckedChange = { notificationsEnabled = it }
-            )
-
-            Divider(modifier = Modifier.padding(vertical = 8.dp))
-
-            // Seção de Mídia
-            SettingsSectionHeader(title = "Mídia")
-
-            // Switch para Sons
-            SettingsSwitchItem(
-                title = "Sons",
-                description = "Ativar sons de feedback",
-                icon = Icons.Default.VolumeUp,
-                checked = soundEnabled,
-                onCheckedChange = { soundEnabled = it }
-            )
-
-            // Switch para Reprodução Automática
-            SettingsSwitchItem(
-                title = "Reprodução Automática",
-                description = "Reproduzir vídeos automaticamente",
-                icon = Icons.Default.PlayCircle,
-                checked = autoPlayVideos,
-                onCheckedChange = { autoPlayVideos = it }
+                checked = userPreferences.notificationsEnabled,
+                onCheckedChange = { settingsViewModel.setNotificationsEnabled(it) }
             )
 
             Divider(modifier = Modifier.padding(vertical = 8.dp))
@@ -118,64 +105,14 @@ fun SettingsScreen(
                 onClick = {
                     dialogTitle = "Limpar Favoritos"
                     dialogText = "Tem certeza que deseja remover todos os treinos favoritos? Esta ação não pode ser desfeita."
-                    dialogAction = onClearFavorites
-                    showConfirmDialog = true
-                }
-            )
-
-            // Botão para Redefinir Preferências
-            SettingsButtonItem(
-                title = "Redefinir Preferências",
-                description = "Restaurar todas as configurações para o padrão",
-                icon = Icons.Default.Refresh,
-                onClick = {
-                    dialogTitle = "Redefinir Preferências"
-                    dialogText = "Tem certeza que deseja redefinir todas as preferências para os valores padrão? Esta ação não pode ser desfeita."
-                    dialogAction = onResetPreferences
+                    dialogAction = { settingsViewModel.clearFavorites() }
                     showConfirmDialog = true
                 }
             )
 
             Spacer(modifier = Modifier.height(24.dp))
-
-            // Informações do aplicativo
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 8.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant
-                )
-            ) {
-                Column(
-                    modifier = Modifier.padding(16.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Text(
-                        text = "Gym Log",
-                        style = MaterialTheme.typography.titleLarge
-                    )
-
-                    Spacer(modifier = Modifier.height(4.dp))
-
-                    Text(
-                        text = "Versão 1.0.0",
-                        style = MaterialTheme.typography.bodyMedium
-                    )
-
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    Text(
-                        text = "© 2025 Gym Log App",
-                        style = MaterialTheme.typography.bodySmall
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
         }
 
-        // Diálogo de confirmação
         if (showConfirmDialog) {
             AlertDialog(
                 onDismissRequest = { showConfirmDialog = false },
@@ -224,7 +161,8 @@ fun SettingsSwitchItem(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 8.dp),
+            .padding(vertical = 8.dp)
+            .clickable { onCheckedChange(!checked) }, // Permite clicar na linha toda
         verticalAlignment = Alignment.CenterVertically
     ) {
         Icon(
@@ -241,12 +179,13 @@ fun SettingsSwitchItem(
         ) {
             Text(
                 text = title,
-                style = MaterialTheme.typography.titleSmall
+                style = MaterialTheme.typography.titleMedium // Ajuste de estilo para melhor visualização
             )
 
             Text(
                 text = description,
-                style = MaterialTheme.typography.bodySmall
+                style = MaterialTheme.typography.bodyMedium, // Ajuste de estilo para melhor visualização
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
 
@@ -285,12 +224,13 @@ fun SettingsButtonItem(
         ) {
             Text(
                 text = title,
-                style = MaterialTheme.typography.titleSmall
+                style = MaterialTheme.typography.titleMedium
             )
 
             Text(
                 text = description,
-                style = MaterialTheme.typography.bodySmall
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
 

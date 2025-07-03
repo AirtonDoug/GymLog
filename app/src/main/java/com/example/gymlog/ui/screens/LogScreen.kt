@@ -94,7 +94,7 @@ fun LogScreen(
         }
     ) { innerPadding ->
         if (mockWorkoutLogState.isEmpty()) {
-            // Mensagem se o histórico estiver vazio
+
             Box(
                 modifier = Modifier
                     .fillMaxSize()

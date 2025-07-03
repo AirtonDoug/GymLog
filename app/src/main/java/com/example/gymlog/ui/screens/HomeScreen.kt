@@ -6,6 +6,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -55,23 +56,35 @@ fun HomeScreen(
             TopAppBar(
                 title = { Text("Gym Log") },
                 actions = {
-                    // Search Field - Use ViewModel state and callback
+                    // Search Field - CORRIGIDO
                     OutlinedTextField(
-                        value = searchQuery, // Use state from ViewModel
-                        onValueChange = { homeViewModel.onSearchQueryChange(it) }, // Call ViewModel method
+                        value = searchQuery,
+                        onValueChange = { homeViewModel.onSearchQueryChange(it) },
                         modifier = Modifier
-                            .fillMaxWidth(0.6f)
+                            .fillMaxWidth(0.65f)
+                            .height(50.dp)
                             .padding(end = 8.dp),
-                        placeholder = { Text("Buscar rotinas...") },
+
+                        // Define um estilo de texto menor para melhor alinhamento vertical
+                        textStyle = MaterialTheme.typography.bodySmall,
+
+                        placeholder = {
+                            Text(
+                                "Buscar rotinas...",
+                                // Aplica o mesmo estilo ao placeholder para consistência
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                        },
                         singleLine = true,
                         leadingIcon = { Icon(Icons.Default.Search, "Buscar") },
                         trailingIcon = {
                             if (searchQuery.isNotEmpty()) {
-                                IconButton(onClick = { homeViewModel.onSearchQueryChange("") }) { // Call ViewModel method
+                                IconButton(onClick = { homeViewModel.onSearchQueryChange("") }) {
                                     Icon(Icons.Default.Clear, "Limpar busca")
                                 }
                             }
-                        }
+                        },
+                        shape = CircleShape
                     )
                     // More Options Menu
                     IconButton(onClick = { showMenu = !showMenu }) {
@@ -161,7 +174,7 @@ fun WorkoutCard(
                         .size(36.dp)
                         .background(
                             MaterialTheme.colorScheme.surface.copy(alpha = 0.8f),
-                            shape = androidx.compose.foundation.shape.CircleShape
+                            shape = CircleShape
                         )
                 ) {
                     if (isFavoriting) {

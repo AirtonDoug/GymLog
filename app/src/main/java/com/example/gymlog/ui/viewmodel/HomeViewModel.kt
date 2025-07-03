@@ -32,7 +32,7 @@ class HomeViewModel(private val workoutRepository: WorkoutRepository) : ViewMode
         _searchQuery,
         _favoritingInProgress
     ) { routines, query, favoritingIds ->
-        delay(1500) // Simula o atraso de rede
+        delay(1000) // Simula o atraso de rede
         val filteredRoutines = if (query.isBlank()) {
             routines
         } else {
