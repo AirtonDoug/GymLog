@@ -11,15 +11,17 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.example.gymlog.data.repositories.MockWorkoutRepository
-import com.example.gymlog.data.repositories.UserPreferencesRepository
 import com.example.gymlog.ui.components.BottomNavigationBar
+import com.example.gymlog.ui.theme.AppTheme
 import com.example.gymlog.ui.viewmodel.SettingsViewModel
 import com.example.gymlog.ui.viewmodel.SettingsViewModelFactory
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -27,15 +29,16 @@ fun SettingsScreen(
     navController: NavController,
 ) {
     val context = LocalContext.current
+    // A chamada para a fábrica agora é mais simples.
     val settingsViewModel: SettingsViewModel = viewModel(
         factory = SettingsViewModelFactory(
             context.applicationContext as Application,
-            MockWorkoutRepository(),
-            UserPreferencesRepository(context)
+            MockWorkoutRepository()
         )
     )
     val userPreferences by settingsViewModel.userPreferencesFlow.collectAsState()
 
+    // ... (o resto do ficheiro permanece exatamente igual) ...
     var showConfirmDialog by remember { mutableStateOf(false) }
     var dialogAction by remember { mutableStateOf<() -> Unit>({}) }
     var dialogTitle by remember { mutableStateOf("") }
@@ -79,6 +82,34 @@ fun SettingsScreen(
             )
 
             Divider(modifier = Modifier.padding(vertical = 8.dp))
+
+            // Seção de Tema
+            SettingsSectionHeader(title = "Tema do Aplicativo")
+
+            Column {
+                // Itera sobre todos os valores do enum AppTheme
+                AppTheme.values().forEach { theme ->
+                    Row(
+                        Modifier
+                            .fillMaxWidth()
+                            .clickable { settingsViewModel.setAppTheme(theme) },
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        RadioButton(
+                            selected = (userPreferences.appTheme == theme),
+                            onClick = { settingsViewModel.setAppTheme(theme) }
+                        )
+                        Text(
+                            text = theme.name.lowercase(Locale.getDefault()).replaceFirstChar { it.titlecase(Locale.getDefault()) },
+                            style = MaterialTheme.typography.bodyLarge,
+                            modifier = Modifier.padding(start = 8.dp)
+                        )
+                    }
+                }
+            }
+
+            Divider(modifier = Modifier.padding(vertical = 8.dp))
+
 
             // Seção de Notificações
             SettingsSectionHeader(title = "Notificações")
@@ -140,6 +171,8 @@ fun SettingsScreen(
     }
 }
 
+// ---- As funções auxiliares permanecem as mesmas ----
+
 @Composable
 fun SettingsSectionHeader(title: String) {
     Text(
@@ -154,7 +187,7 @@ fun SettingsSectionHeader(title: String) {
 fun SettingsSwitchItem(
     title: String,
     description: String,
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    icon: ImageVector,
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit
 ) {
@@ -162,7 +195,7 @@ fun SettingsSwitchItem(
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 8.dp)
-            .clickable { onCheckedChange(!checked) }, // Permite clicar na linha toda
+            .clickable { onCheckedChange(!checked) },
         verticalAlignment = Alignment.CenterVertically
     ) {
         Icon(
@@ -171,24 +204,20 @@ fun SettingsSwitchItem(
             tint = MaterialTheme.colorScheme.primary,
             modifier = Modifier.size(24.dp)
         )
-
         Spacer(modifier = Modifier.width(16.dp))
-
         Column(
             modifier = Modifier.weight(1f)
         ) {
             Text(
                 text = title,
-                style = MaterialTheme.typography.titleMedium // Ajuste de estilo para melhor visualização
+                style = MaterialTheme.typography.titleMedium
             )
-
             Text(
                 text = description,
-                style = MaterialTheme.typography.bodyMedium, // Ajuste de estilo para melhor visualização
+                style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
-
         Switch(
             checked = checked,
             onCheckedChange = onCheckedChange
@@ -200,7 +229,7 @@ fun SettingsSwitchItem(
 fun SettingsButtonItem(
     title: String,
     description: String,
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    icon: ImageVector,
     onClick: () -> Unit
 ) {
     Row(
@@ -216,9 +245,7 @@ fun SettingsButtonItem(
             tint = MaterialTheme.colorScheme.primary,
             modifier = Modifier.size(24.dp)
         )
-
         Spacer(modifier = Modifier.width(16.dp))
-
         Column(
             modifier = Modifier.weight(1f)
         ) {
@@ -226,14 +253,12 @@ fun SettingsButtonItem(
                 text = title,
                 style = MaterialTheme.typography.titleMedium
             )
-
             Text(
                 text = description,
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
-
         Icon(
             imageVector = Icons.Default.ChevronRight,
             contentDescription = null,

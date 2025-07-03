@@ -16,14 +16,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.ContextCompat
 import androidx.navigation.compose.rememberNavController
+import com.example.gymlog.data.repositories.UserPreferences
 import com.example.gymlog.data.repositories.UserPreferencesRepository
 import com.example.gymlog.ui.navigation.AppNavigation
+import com.example.gymlog.ui.theme.AppTheme
 import com.example.gymlog.ui.theme.GymLogTheme
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.runBlocking
 
 class MainActivity : ComponentActivity() {
 
@@ -64,22 +63,32 @@ class MainActivity : ComponentActivity() {
 
         askNotificationPermission()
 
-        val userPreferencesRepository = UserPreferencesRepository(this)
-        val initialDarkMode = runBlocking { userPreferencesRepository.userPreferencesFlow.first().isDarkMode }
-
+        // --- LINHA CORRIGIDA ---
+        // Em vez de chamar o construtor, pedimos a instância única (Singleton).
+        val userPreferencesRepository = UserPreferencesRepository.getInstance(this)
 
         setContent {
+            // Coleta o estado completo das preferências de forma reativa.
+            // O valor inicial garante que o app não quebre antes do DataStore carregar.
             val userPreferences by userPreferencesRepository.userPreferencesFlow.collectAsState(
-                initial = runBlocking { userPreferencesRepository.userPreferencesFlow.first() }
+                initial = UserPreferences(isDarkMode = false, notificationsEnabled = true, appTheme = AppTheme.DEFAULT)
             )
-            MainApp(darkTheme = userPreferences.isDarkMode)
+
+            // Passa as preferências coletadas para o MainApp.
+            // Sempre que o userPreferences mudar, o MainApp será recomposto com os novos valores.
+            MainApp(
+                darkTheme = userPreferences.isDarkMode,
+                appTheme = userPreferences.appTheme
+            )
         }
     }
 }
 
 @Composable
-fun MainApp(darkTheme: Boolean) {
-    GymLogTheme(darkTheme = darkTheme) {
+fun MainApp(darkTheme: Boolean, appTheme: AppTheme) {
+    // A chamada agora é mais simples e passa apenas os parâmetros que vêm do DataStore.
+    // O GymLogTheme agora obedece 100% a estes parâmetros.
+    GymLogTheme(darkTheme = darkTheme, appTheme = appTheme) {
         Surface(
             modifier = Modifier.fillMaxSize(),
             color = MaterialTheme.colorScheme.background
