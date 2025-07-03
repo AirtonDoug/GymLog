@@ -42,10 +42,9 @@ class HomeViewModelFactory : androidx.lifecycle.ViewModelProvider.Factory {
 @Composable
 fun HomeScreen(
     navController: NavController,
-    // Inject the ViewModel
-    homeViewModel: HomeViewModel = viewModel(factory = HomeViewModelFactory())
+    homeViewModel: HomeViewModel // Receba o ViewModel como parâmetro
 ) {
-    // Collect state from ViewModel
+    // O ViewModel agora é injetado, não precisa mais do viewModel()
     val uiState by homeViewModel.uiState.collectAsStateWithLifecycle()
     val searchQuery by homeViewModel.searchQuery.collectAsStateWithLifecycle()
 

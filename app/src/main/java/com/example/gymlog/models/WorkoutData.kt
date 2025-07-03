@@ -159,7 +159,7 @@ data class WorkoutRoutine(
     val exercises: List<Exercise>, // List of exercises in the routine
     val videoUrl: String? = null,
     val audioUrl: String? = null,
-    var isFavorite: Boolean = false, // Use var if mutableStateOf is used elsewhere
+    val isFavorite: Boolean = false,
     val rating: Float = 0f,
     val caloriesBurned: Int = 0 // Estimated calories
 )

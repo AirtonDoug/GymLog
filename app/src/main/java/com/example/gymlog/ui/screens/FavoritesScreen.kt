@@ -16,9 +16,8 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
-import com.example.gymlog.data.repositories.MockWorkoutRepository
 import com.example.gymlog.models.WorkoutRoutine
 import com.example.gymlog.ui.components.BottomNavigationBar
 import com.example.gymlog.ui.viewmodel.FavoritesViewModel
@@ -26,20 +25,14 @@ import com.example.gymlog.ui.viewmodel.FavoritesViewModel
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FavoritesScreen(
-    navController: NavController
+    navController: NavController,
+    favoritesViewModel: FavoritesViewModel // Recebe o ViewModel como parâmetro
 ) {
-    // Create ViewModel directly with repository
-    val favoritesViewModel: FavoritesViewModel = viewModel(
-        factory = object : androidx.lifecycle.ViewModelProvider.Factory {
-            @Suppress("UNCHECKED_CAST")
-            override fun <T : androidx.lifecycle.ViewModel> create(modelClass: Class<T>): T {
-                return FavoritesViewModel(MockWorkoutRepository()) as T
-            }
-        }
-    )
+    // O ViewModel agora é injetado, não é mais criado localmente.
+    // Isso garante que ele compartilhe o mesmo repositório que as outras telas.
 
-    // Collect state from ViewModel
-    val uiState by favoritesViewModel.uiState.collectAsState()
+    // Coleta o estado do ViewModel
+    val uiState by favoritesViewModel.uiState.collectAsStateWithLifecycle()
 
     var showMenu by remember { mutableStateOf(false) }
 
@@ -67,7 +60,7 @@ fun FavoritesScreen(
             BottomNavigationBar(navController = navController)
         }
     ) { innerPadding ->
-        // Handle Loading, Error, and Empty states from ViewModel
+        // O restante do código permanece o mesmo, pois já consome o uiState.
         when {
             uiState.isLoading -> {
                 Box(modifier = Modifier.fillMaxSize().padding(innerPadding), contentAlignment = Alignment.Center) {
@@ -80,9 +73,10 @@ fun FavoritesScreen(
                 }
             }
             uiState.favoriteRoutines.isEmpty() -> {
-                // Display empty state message
                 Box(
-                    modifier = Modifier.fillMaxSize().padding(innerPadding),
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(innerPadding),
                     contentAlignment = Alignment.Center
                 ) {
                     Column(
@@ -104,7 +98,6 @@ fun FavoritesScreen(
                 }
             }
             else -> {
-                // Display list of favorites from ViewModel state
                 LazyColumn(
                     modifier = Modifier
                         .fillMaxSize()
@@ -117,7 +110,7 @@ fun FavoritesScreen(
                         FavoriteWorkoutCard(
                             workout = workout,
                             onClick = { navController.navigate("workout_details/${workout.id}") },
-                            // Call ViewModel method to remove favorite
+                            // Chama o método do ViewModel para remover o favorito
                             onRemove = { favoritesViewModel.removeFavorite(workout) }
                         )
                     }
@@ -127,7 +120,7 @@ fun FavoritesScreen(
     }
 }
 
-// FavoriteWorkoutCard remains the same, receiving data and callbacks
+// O FavoriteWorkoutCard não precisa de alterações.
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FavoriteWorkoutCard(

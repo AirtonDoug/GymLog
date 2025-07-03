@@ -1,4 +1,3 @@
-
 package com.example.gymlog.ui.screens
 
 import android.app.TimePickerDialog
@@ -25,9 +24,8 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
-import com.example.gymlog.data.repositories.MockWorkoutRepository
 import com.example.gymlog.models.Exercise
 import com.example.gymlog.models.WorkoutRoutine
 import com.example.gymlog.models.mockWorkoutRoutines
@@ -40,27 +38,19 @@ import java.util.Calendar
 @Composable
 fun WorkoutDetailScreen(
     navController: NavController,
-    workoutId: Int
+    workoutId: Int,
+    detailViewModel: WorkoutDetailViewModel // Recebe o ViewModel como parâmetro
 ) {
     val context = LocalContext.current
-    // Create ViewModel directly with repository
-    val detailViewModel: WorkoutDetailViewModel = viewModel(
-        factory = object : androidx.lifecycle.ViewModelProvider.Factory {
-            @Suppress("UNCHECKED_CAST")
-            override fun <T : androidx.lifecycle.ViewModel> create(modelClass: Class<T>): T {
-                val savedStateHandle = androidx.lifecycle.SavedStateHandle(mapOf("workoutId" to workoutId))
-                return WorkoutDetailViewModel(savedStateHandle, MockWorkoutRepository()) as T
-            }
-        }
-    )
+    // O ViewModel agora é injetado, garantindo o uso do repositório compartilhado.
 
-    // Collect state from ViewModel
-    val uiState by detailViewModel.uiState.collectAsState()
+    // Coleta o estado do ViewModel
+    val uiState by detailViewModel.uiState.collectAsStateWithLifecycle()
 
-    var isPlaying by remember { mutableStateOf(false) } // Local state for media player UI
+    var isPlaying by remember { mutableStateOf(false) } // Estado local para a UI do media player
     var showMenu by remember { mutableStateOf(false) }
 
-    // Use the routine from the UI state
+    // Usa a rotina do estado da UI
     val workoutRoutine = uiState.routine
 
     Scaffold(
@@ -74,7 +64,7 @@ fun WorkoutDetailScreen(
                 },
                 actions = {
                     if (workoutRoutine != null) {
-                        // Favorite Button - Use ViewModel state and action
+                        // Botão de Favorito - Usa o estado e a ação do ViewModel
                         IconButton(onClick = { detailViewModel.toggleFavorite() }) {
                             Icon(
                                 imageVector = if (uiState.isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
@@ -83,7 +73,7 @@ fun WorkoutDetailScreen(
                             )
                         }
 
-                        // Schedule Notification Button
+                        // Botão de Agendar Notificação
                         IconButton(onClick = {
                             val calendar = Calendar.getInstance()
                             val timePickerDialog = TimePickerDialog(
@@ -112,7 +102,7 @@ fun WorkoutDetailScreen(
                             )
                         }
                     }
-                    // More Options Menu
+                    // Menu de Mais Opções
                     IconButton(onClick = { showMenu = !showMenu }) {
                         Icon(Icons.Default.MoreVert, "Menu")
                     }
@@ -128,7 +118,7 @@ fun WorkoutDetailScreen(
             BottomNavigationBar(navController = navController)
         }
     ) { innerPadding ->
-        // Handle Loading, Error, and Success states from ViewModel
+        // O restante do código permanece o mesmo.
         when {
             uiState.isLoading -> {
                 Box(modifier = Modifier.fillMaxSize().padding(innerPadding), contentAlignment = Alignment.Center) {
@@ -141,14 +131,12 @@ fun WorkoutDetailScreen(
                 }
             }
             workoutRoutine != null -> {
-                // Display details when routine is available
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(innerPadding)
                         .verticalScroll(rememberScrollState())
                 ) {
-                    // Workout Image Header
                     Box(modifier = Modifier.fillMaxWidth().height(250.dp)) {
                         Image(
                             painter = painterResource(id = workoutRoutine.image),
@@ -185,7 +173,6 @@ fun WorkoutDetailScreen(
                         }
                     }
 
-                    // Detailed Information Section
                     Column(modifier = Modifier.padding(16.dp)) {
                         Row(modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp), horizontalArrangement = Arrangement.SpaceEvenly) {
                             StatItem(icon = Icons.Default.Timer, value = "${workoutRoutine.duration}", label = "minutos")
@@ -196,11 +183,10 @@ fun WorkoutDetailScreen(
                         Text("Descrição", style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(top = 16.dp, bottom = 8.dp))
                         Text(workoutRoutine.description, style = MaterialTheme.typography.bodyMedium)
 
-                        // Media Player Card (Simplified - Needs proper implementation)
                         if (workoutRoutine.videoUrl != null || workoutRoutine.audioUrl != null) {
                             Spacer(modifier = Modifier.height(16.dp))
                             Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
-                                // ... (Media player UI - keep as is for now)
+                                // ... (UI do media player)
                             }
                         }
 
@@ -229,7 +215,6 @@ fun WorkoutDetailScreen(
                     }
                 }
             }
-            // Optional: Handle case where routine is null after loading (e.g., invalid ID)
             workoutRoutine == null && !uiState.isLoading && uiState.errorMessage == null -> {
                 Box(modifier = Modifier.fillMaxSize().padding(innerPadding), contentAlignment = Alignment.Center) {
                     Text("Rotina não encontrada.")
@@ -239,7 +224,7 @@ fun WorkoutDetailScreen(
     }
 }
 
-// StatItem, ExerciseItem, RelatedWorkoutCard remain the same
+// Os composables StatItem, ExerciseItem, e RelatedWorkoutCard permanecem os mesmos.
 
 @Composable
 fun StatItem(icon: androidx.compose.ui.graphics.vector.ImageVector, value: String, label: String) {
