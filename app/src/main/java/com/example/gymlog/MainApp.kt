@@ -38,20 +38,11 @@ class MainActivity : ComponentActivity() {
 
     private fun askNotificationPermission() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            when {
-                ContextCompat.checkSelfPermission(
-                    this,
-                    Manifest.permission.POST_NOTIFICATIONS
-                ) == PackageManager.PERMISSION_GRANTED -> {
-                    Log.d("MainActivity", "Permissão para notificações já foi concedida.")
-                }
-                shouldShowRequestPermissionRationale(Manifest.permission.POST_NOTIFICATIONS) -> {
-                    requestPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-                }
-                else -> {
-                    Log.d("MainActivity", "Solicitando permissão para notificações.")
-                    requestPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-                }
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                Log.d("MainActivity", "Solicitando permissão para notificações.")
+                requestPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+            } else {
+                Log.d("MainActivity", "Permissão para notificações já foi concedida.")
             }
         }
     }
@@ -63,19 +54,12 @@ class MainActivity : ComponentActivity() {
 
         askNotificationPermission()
 
-        // --- LINHA CORRIGIDA ---
-        // Em vez de chamar o construtor, pedimos a instância única (Singleton).
         val userPreferencesRepository = UserPreferencesRepository.getInstance(this)
 
         setContent {
-            // Coleta o estado completo das preferências de forma reativa.
-            // O valor inicial garante que o app não quebre antes do DataStore carregar.
             val userPreferences by userPreferencesRepository.userPreferencesFlow.collectAsState(
                 initial = UserPreferences(isDarkMode = false, notificationsEnabled = true, appTheme = AppTheme.DEFAULT)
             )
-
-            // Passa as preferências coletadas para o MainApp.
-            // Sempre que o userPreferences mudar, o MainApp será recomposto com os novos valores.
             MainApp(
                 darkTheme = userPreferences.isDarkMode,
                 appTheme = userPreferences.appTheme
@@ -86,8 +70,6 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun MainApp(darkTheme: Boolean, appTheme: AppTheme) {
-    // A chamada agora é mais simples e passa apenas os parâmetros que vêm do DataStore.
-    // O GymLogTheme agora obedece 100% a estes parâmetros.
     GymLogTheme(darkTheme = darkTheme, appTheme = appTheme) {
         Surface(
             modifier = Modifier.fillMaxSize(),
