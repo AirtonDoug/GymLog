@@ -23,6 +23,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import com.example.gymlog.data.repositories.MockWorkoutRepository
 import com.example.gymlog.models.WorkoutRoutine
+import com.example.gymlog.models.WorkoutRoutineWithExercises
 import com.example.gymlog.ui.components.BottomNavigationBar
 import com.example.gymlog.ui.components.StatRowSmall
 import com.example.gymlog.ui.theme.Michroma // Importe a fonte Michroma
@@ -90,6 +91,7 @@ fun HomeScreen(
                         Icon(Icons.Default.MoreVert, "Menu")
                     }
                     DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
+                        DropdownMenuItem(text = { Text("My Routines") }, leadingIcon = { Icon(Icons.Default.List, null) }, onClick = { navController.navigate("my_routines"); showMenu = false })
                         DropdownMenuItem(text = { Text("Favoritos") }, leadingIcon = { Icon(Icons.Default.Favorite, null) }, onClick = { navController.navigate("favorites"); showMenu = false })
                         DropdownMenuItem(text = { Text("Configurações") }, leadingIcon = { Icon(Icons.Default.Settings, null) }, onClick = { navController.navigate("settings"); showMenu = false })
                         DropdownMenuItem(text = { Text("Ajuda") }, leadingIcon = { Icon(Icons.Default.Help, null) }, onClick = { navController.navigate("help"); showMenu = false })
@@ -122,13 +124,13 @@ fun HomeScreen(
                     verticalArrangement = Arrangement.spacedBy(16.dp),
                     contentPadding = PaddingValues(vertical = 16.dp)
                 ) {
-                    items(uiState.routines, key = { it.id }) { routine ->
+                    items(uiState.routines, key = { it.routine.id }) { routine ->
                         WorkoutCard(
                             workout = routine,
-                            isFavorite = routine.isFavorite,
-                            isFavoriting = uiState.favoritingInProgress.contains(routine.id),
+                            isFavorite = routine.routine.isFavorite,
+                            isFavoriting = uiState.favoritingInProgress.contains(routine.routine.id),
                             onToggleFavorite = { homeViewModel.toggleFavorite(routine) },
-                            onClick = { navController.navigate("workout_details/${routine.id}") }
+                            onClick = { navController.navigate("workout_details/${routine.routine.id}") }
                         )
                     }
                 }
@@ -140,7 +142,7 @@ fun HomeScreen(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun WorkoutCard(
-    workout: WorkoutRoutine,
+    workout: WorkoutRoutineWithExercises,
     isFavorite: Boolean,
     isFavoriting: Boolean,
     onToggleFavorite: () -> Unit,
@@ -155,8 +157,8 @@ fun WorkoutCard(
         Column {
             Box {
                 Image(
-                    painter = painterResource(id = workout.image),
-                    contentDescription = workout.name,
+                    painter = painterResource(id = workout.routine.image),
+                    contentDescription = workout.routine.name,
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(180.dp),
@@ -190,12 +192,12 @@ fun WorkoutCard(
             }
             Column(modifier = Modifier.padding(16.dp)) {
                 Text(
-                    text = workout.name,
+                    text = workout.routine.name,
                     style = MaterialTheme.typography.headlineSmall
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    text = workout.description,
+                    text = workout.routine.description,
                     style = MaterialTheme.typography.bodyMedium,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis
@@ -205,9 +207,9 @@ fun WorkoutCard(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    StatRowSmall(icon = Icons.Default.Timer, value = "${workout.duration} min")
-                    StatRowSmall(icon = Icons.Default.FitnessCenter, value = workout.category)
-                    StatRowSmall(icon = Icons.Default.Speed, value = workout.difficulty)
+                    StatRowSmall(icon = Icons.Default.Timer, value = "${workout.routine.duration} min")
+                    StatRowSmall(icon = Icons.Default.FitnessCenter, value = workout.routine.category)
+                    StatRowSmall(icon = Icons.Default.Speed, value = workout.routine.difficulty)
                 }
             }
         }

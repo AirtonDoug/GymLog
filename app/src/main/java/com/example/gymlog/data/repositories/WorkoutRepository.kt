@@ -13,25 +13,27 @@ import java.util.UUID
  */
 interface WorkoutRepository {
     // Workout Routines
-    fun getWorkoutRoutines(): Flow<List<WorkoutRoutine>>
-    fun getWorkoutRoutineById(id: Int): Flow<WorkoutRoutine?>
-    fun getFavoriteWorkoutRoutines(): Flow<List<WorkoutRoutine>>
+    fun getWorkoutRoutines(): Flow<List<WorkoutRoutineWithExercises>>
+    fun getWorkoutRoutineById(id: Int): Flow<WorkoutRoutineWithExercises?>
+    fun getFavoriteWorkoutRoutines(): Flow<List<WorkoutRoutineWithExercises>>
     suspend fun toggleFavorite(routineId: Int)
     suspend fun clearFavorites()
+    suspend fun saveWorkoutRoutine(routineWithExercises: WorkoutRoutineWithExercises)
+    suspend fun deleteWorkoutRoutine(routineId: Int)
 
     // Exercises
     fun getAllExercises(): Flow<List<Exercise>>
     fun getExerciseById(id: Int): Flow<Exercise?>
 
     // Workout Logs
-    fun getWorkoutLogs(): Flow<List<WorkoutLogEntry>>
-    fun getWorkoutLogById(id: String): Flow<WorkoutLogEntry?>
-    suspend fun saveWorkoutLog(logEntry: WorkoutLogEntry)
-    suspend fun updateWorkoutLog(logEntry: WorkoutLogEntry)
+    fun getWorkoutLogs(): Flow<List<WorkoutLogEntryWithExercises>>
+    fun getWorkoutLogById(id: String): Flow<WorkoutLogEntryWithExercises?>
+    suspend fun saveWorkoutLog(logEntry: WorkoutLogEntryWithExercises)
+    suspend fun updateWorkoutLog(logEntry: WorkoutLogEntryWithExercises)
     suspend fun deleteWorkoutLog(logId: String)
 
     // User Profile
-    fun getUserProfile(): Flow<ProfileData>
+    fun getUserProfile(): Flow<ProfileData?>
     suspend fun updateUserProfile(profileData: ProfileData)
 
     // User Settings
@@ -57,44 +59,55 @@ data class UserSettings(
 class MockWorkoutRepository : WorkoutRepository {
 
     // Workout Routines
-    private val _routines = MutableStateFlow(mockWorkoutRoutines)
+    private val _routines = MutableStateFlow(mockWorkoutRoutinesWithExercises)
     private val _favoriteIds = MutableStateFlow(
-        mockWorkoutRoutines.filter { it.isFavorite }.map { it.id }.toSet()
+        mockWorkoutRoutinesWithExercises.filter { it.routine.isFavorite }.map { it.routine.id }.toSet()
     )
 
     // Exercises
     private val _exercises = MutableStateFlow(exerciseList)
 
     // Workout Logs
-    private val _workoutLogs = MutableStateFlow<List<WorkoutLogEntry>>(
-        listOf(
-            // Sample workout log
-            WorkoutLogEntry(
-                id = UUID.randomUUID().toString(),
-                routineId = 1,
-                workoutName = "Treino Full Body",
-                startTime = Date(System.currentTimeMillis() - 86400000), // Yesterday
-                endTime = Date(System.currentTimeMillis() - 86400000 + 3600000), // 1 hour later
-                durationMillis = 3600000,
-                performedExercises = mutableListOf(
-                    PerformedExercise(
-                        exerciseId = 1,
-                        exerciseName = "Supino Reto",
-                        sets = mutableListOf(
-                            PerformedSet(reps = 12, weight = 100.0, isCompleted = true),
-                            PerformedSet(reps = 10, weight = 100.0, isCompleted = true),
-                            PerformedSet(reps = 8, weight = 100.0, isCompleted = true)
-                        ),
-                        targetSets = 3,
-                        targetReps = 12,
-                        targetWeight = 100.0
-                    )
+    private val _workoutLogs = MutableStateFlow<List<WorkoutLogEntryWithExercises>>(emptyList())
+
+
+    init {
+        val logId = UUID.randomUUID().toString()
+        val performedExerciseId = UUID.randomUUID().toString()
+        _workoutLogs.value = listOf(
+            WorkoutLogEntryWithExercises(
+                logEntry = WorkoutLogEntry(
+                    id = logId,
+                    routineId = 1,
+                    workoutName = "Treino Full Body",
+                    startTime = Date(System.currentTimeMillis() - 86400000), // Yesterday
+                    endTime = Date(System.currentTimeMillis() - 86400000 + 3600000), // 1 hour later
+                    durationMillis = 3600000,
+                    notes = "Bom treino, consegui completar todas as séries.",
+                    caloriesBurned = 450
                 ),
-                notes = "Bom treino, consegui completar todas as séries.",
-                caloriesBurned = 450
+                performedExercises = listOf(
+                    PerformedExerciseWithSets(
+                        performedExercise = PerformedExercise(
+                            id = performedExerciseId,
+                            workoutLogId = logId,
+                            exerciseId = 1,
+                            exerciseName = "Supino Reto",
+                            targetSets = 3,
+                            targetReps = 12,
+                            targetWeight = 100.0
+                        ),
+                        sets = listOf(
+                            PerformedSet(performedExerciseId = performedExerciseId, reps = 12, weight = 100.0, isCompleted = true),
+                            PerformedSet(performedExerciseId = performedExerciseId, reps = 10, weight = 100.0, isCompleted = true),
+                            PerformedSet(performedExerciseId = performedExerciseId, reps = 8, weight = 100.0, isCompleted = true)
+                        )
+                    )
+                )
             )
         )
-    )
+    }
+
 
     // User Profile
     private val _userProfile = MutableStateFlow(profileData)
@@ -103,18 +116,24 @@ class MockWorkoutRepository : WorkoutRepository {
     private val _userSettings = MutableStateFlow(UserSettings())
 
     // Workout Routines Implementation
-    override fun getWorkoutRoutines(): Flow<List<WorkoutRoutine>> {
+    override fun getWorkoutRoutines(): Flow<List<WorkoutRoutineWithExercises>> {
         return _routines.combine(_favoriteIds) { routines, favIds ->
-            routines.map { it.copy(isFavorite = it.id in favIds) }
+            routines.map { routineWithExercises ->
+                routineWithExercises.copy(
+                    routine = routineWithExercises.routine.copy(
+                        isFavorite = routineWithExercises.routine.id in favIds
+                    )
+                )
+            }
         }
     }
 
-    override fun getWorkoutRoutineById(id: Int): Flow<WorkoutRoutine?> {
-        return getWorkoutRoutines().map { routines -> routines.find { it.id == id } }
+    override fun getWorkoutRoutineById(id: Int): Flow<WorkoutRoutineWithExercises?> {
+        return getWorkoutRoutines().map { routines -> routines.find { it.routine.id == id } }
     }
 
-    override fun getFavoriteWorkoutRoutines(): Flow<List<WorkoutRoutine>> {
-        return getWorkoutRoutines().map { routines -> routines.filter { it.isFavorite } }
+    override fun getFavoriteWorkoutRoutines(): Flow<List<WorkoutRoutineWithExercises>> {
+        return getWorkoutRoutines().map { routines -> routines.filter { it.routine.isFavorite } }
     }
 
     override suspend fun toggleFavorite(routineId: Int) {
@@ -125,10 +144,38 @@ class MockWorkoutRepository : WorkoutRepository {
                 currentIds + routineId
             }
         }
+        _routines.update { routines ->
+            routines.map { routineWithExercises ->
+                if (routineWithExercises.routine.id == routineId) {
+                    routineWithExercises.copy(
+                        routine = routineWithExercises.routine.copy(
+                            isFavorite = !routineWithExercises.routine.isFavorite
+                        )
+                    )
+                } else {
+                    routineWithExercises
+                }
+            }
+        }
     }
 
     override suspend fun clearFavorites() {
         _favoriteIds.value = emptySet()
+    }
+
+    override suspend fun saveWorkoutRoutine(routineWithExercises: WorkoutRoutineWithExercises) {
+        val currentRoutines = _routines.value.toMutableList()
+        val index = currentRoutines.indexOfFirst { it.routine.id == routineWithExercises.routine.id }
+        if (index != -1) {
+            currentRoutines[index] = routineWithExercises
+        } else {
+            currentRoutines.add(routineWithExercises)
+        }
+        _routines.value = currentRoutines
+    }
+
+    override suspend fun deleteWorkoutRoutine(routineId: Int) {
+        _routines.update { routines -> routines.filter { it.routine.id != routineId } }
     }
 
     // Exercises Implementation
@@ -141,26 +188,32 @@ class MockWorkoutRepository : WorkoutRepository {
     }
 
     // Workout Logs Implementation
-    override fun getWorkoutLogs(): Flow<List<WorkoutLogEntry>> {
+    override fun getWorkoutLogs(): Flow<List<WorkoutLogEntryWithExercises>> {
         return _workoutLogs
     }
 
-    override fun getWorkoutLogById(id: String): Flow<WorkoutLogEntry?> {
-        return _workoutLogs.map { logs -> logs.find { it.id == id } }
+    override fun getWorkoutLogById(id: String): Flow<WorkoutLogEntryWithExercises?> {
+        return _workoutLogs.map { logs -> logs.find { it.logEntry.id == id } }
     }
 
-    override suspend fun saveWorkoutLog(logEntry: WorkoutLogEntry) {
+    override suspend fun saveWorkoutLog(logEntry: WorkoutLogEntryWithExercises) {
         _workoutLogs.update { currentLogs -> currentLogs + logEntry }
     }
 
-    override suspend fun updateWorkoutLog(logEntry: WorkoutLogEntry) {
+    override suspend fun updateWorkoutLog(logEntry: WorkoutLogEntryWithExercises) {
         _workoutLogs.update { currentLogs ->
-            currentLogs.map { if (it.id == logEntry.id) logEntry else it }
+            currentLogs.map {
+                if (it.logEntry.id == logEntry.logEntry.id) {
+                    logEntry
+                } else {
+                    it
+                }
+            }
         }
     }
 
     override suspend fun deleteWorkoutLog(logId: String) {
-        _workoutLogs.update { currentLogs -> currentLogs.filter { it.id != logId } }
+        _workoutLogs.update { currentLogs -> currentLogs.filter { it.logEntry.id != logId } }
     }
 
     // User Profile Implementation
