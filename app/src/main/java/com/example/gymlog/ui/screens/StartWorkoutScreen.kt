@@ -17,14 +17,19 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
+import com.example.gymlog.models.WorkoutRoutineWithExercises
+import com.example.gymlog.ui.viewmodel.StartWorkoutViewModel
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.gymlog.models.WorkoutRoutine
-import com.example.gymlog.models.mockWorkoutRoutines
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun StartWorkoutScreen(
-    navController: NavController
+    navController: NavController,
+    startWorkoutViewModel: StartWorkoutViewModel
 ) {
+    val uiState by startWorkoutViewModel.uiState.collectAsState()
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -64,9 +69,9 @@ fun StartWorkoutScreen(
             }
 
             // Lista de Rotinas Pré-definidas
-            items(mockWorkoutRoutines, key = { it.id }) { routine ->
-                WorkoutRoutineCard(routine = routine) {
-                    navController.navigate("active_workout/${routine.id}") // Pass routine ID
+            items(uiState.availableRoutines, key = { it.routine.id }) { routine ->
+                WorkoutRoutineCard(routine = routine.routine) {
+                    navController.navigate("active_workout/${routine.routine.id}") // Pass routine ID
                 }
             }
         }

@@ -1,17 +1,171 @@
 package com.example.gymlog.models
 
+import androidx.room.Embedded
+import androidx.room.Entity
+import androidx.room.ForeignKey
+import androidx.room.Junction
+import androidx.room.PrimaryKey
+import androidx.room.Relation
+import androidx.room.TypeConverter
+import androidx.room.TypeConverters
 import com.example.gymlog.R
 import java.util.Date
-import java.util.UUID // Import UUID
+import java.util.UUID
 
-// --- Existing Models (Keep as is or adapt if needed) ---
+// --- Type Converters ---
+
+class Converters {
+    @TypeConverter
+    fun fromTimestamp(value: Long?): Date? {
+        return value?.let { Date(it) }
+    }
+
+    @TypeConverter
+    fun dateToTimestamp(date: Date?): Long? {
+        return date?.time
+    }
+}
+
+// --- Entities ---
+
+@Entity(tableName = "profile")
 data class ProfileData(
-    val id: Int,
+    @PrimaryKey val id: Int,
     val name: String,
     val height: Double,
     val weight: Double,
     val profilePicture: Int
 )
+
+@Entity(tableName = "exercises")
+data class Exercise(
+    @PrimaryKey val id: Int,
+    val name: String,
+    val description: String,
+    val sets: Int,
+    val reps: Int,
+    val weight: Double,
+    val exercisePicture: Int
+)
+
+@Entity(tableName = "workout_routines")
+data class WorkoutRoutine(
+    @PrimaryKey val id: Int,
+    val name: String,
+    val description: String,
+    val duration: Int,
+    val difficulty: String,
+    val category: String,
+    val image: Int,
+    val videoUrl: String? = null,
+    val audioUrl: String? = null,
+    var isFavorite: Boolean = false,
+    val rating: Float = 0f,
+    val caloriesBurned: Int = 0
+)
+
+@Entity(tableName = "workout_routine_exercise_cross_ref", primaryKeys = ["routineId", "exerciseId"])
+data class WorkoutRoutineExerciseCrossRef(
+    val routineId: Int,
+    val exerciseId: Int
+)
+
+data class WorkoutRoutineWithExercises(
+    @Embedded val routine: WorkoutRoutine,
+    @Relation(
+        parentColumn = "id",
+        entityColumn = "id",
+        associateBy = Junction(
+            value = WorkoutRoutineExerciseCrossRef::class,
+            parentColumn = "routineId",
+            entityColumn = "exerciseId"
+        )
+    )
+    val exercises: List<Exercise>
+)
+
+@Entity(tableName = "faqs")
+data class FAQ(
+    @PrimaryKey val id: Int,
+    val question: String,
+    val answer: String
+)
+
+@Entity(
+    tableName = "performed_sets",
+    foreignKeys = [
+        ForeignKey(
+            entity = PerformedExercise::class,
+            parentColumns = ["id"],
+            childColumns = ["performedExerciseId"],
+            onDelete = ForeignKey.CASCADE
+        )
+    ]
+)
+data class PerformedSet(
+    @PrimaryKey val id: String = UUID.randomUUID().toString(),
+    val performedExerciseId: String,
+    var reps: Int,
+    var weight: Double,
+    var isCompleted: Boolean = false
+)
+
+@Entity(
+    tableName = "performed_exercises",
+    foreignKeys = [
+        ForeignKey(
+            entity = WorkoutLogEntry::class,
+            parentColumns = ["id"],
+            childColumns = ["workoutLogId"],
+            onDelete = ForeignKey.CASCADE
+        )
+    ]
+)
+data class PerformedExercise(
+    @PrimaryKey val id: String = UUID.randomUUID().toString(),
+    val workoutLogId: String,
+    val exerciseId: Int,
+    val exerciseName: String,
+    val targetSets: Int,
+    val targetReps: Int,
+    val targetWeight: Double
+)
+
+data class PerformedExerciseWithSets(
+    @Embedded val performedExercise: PerformedExercise,
+    @Relation(
+        parentColumn = "id",
+        entityColumn = "performedExerciseId"
+    )
+    val sets: List<PerformedSet>
+)
+
+
+@Entity(tableName = "workout_log_entries")
+@TypeConverters(Converters::class)
+data class WorkoutLogEntry(
+    @PrimaryKey val id: String = UUID.randomUUID().toString(),
+    val routineId: Int? = null,
+    val workoutName: String,
+    val startTime: Date,
+    var endTime: Date? = null,
+    var durationMillis: Long = 0,
+    var notes: String? = null,
+    var caloriesBurned: Int? = null
+)
+
+data class WorkoutLogEntryWithExercises(
+    @Embedded val logEntry: WorkoutLogEntry,
+    @Relation(
+        parentColumn = "id",
+        entityColumn = "workoutLogId",
+        entity = PerformedExercise::class
+    )
+    val performedExercises: List<PerformedExerciseWithSets>
+)
+
+
+// --- Mock Data ---
 
 val profileData = ProfileData(
     id = 1,
@@ -19,16 +173,6 @@ val profileData = ProfileData(
     height = 170.0,
     weight = 75.0,
     profilePicture = R.drawable.profile
-)
-
-data class Exercise(
-    val id: Int, // Added ID for easier reference
-    val name: String,
-    val description: String,
-    val sets: Int, // Target sets (for routines)
-    val reps: Int, // Target reps (for routines)
-    val weight: Double, // Target weight (for routines)
-    val exercisePicture: Int
 )
 
 val exerciseList = listOf(
@@ -66,8 +210,7 @@ val exerciseList = listOf(
         sets = 3,
         reps = 12,
         weight = profileData.weight,
-        // Corrected: Replaced R.drawable.pull_up (assuming it's a GIF) with a static placeholder
-        exercisePicture = R.drawable.supino // Placeholder: Replace with a static pull-up image (PNG/JPG)
+        exercisePicture = R.drawable.supino
     ),
     Exercise(
         id = 5,
@@ -85,7 +228,7 @@ val exerciseList = listOf(
         sets = 3,
         reps = 15,
         weight = 25.0,
-        exercisePicture = R.drawable.rosca_direta // Placeholder image
+        exercisePicture = R.drawable.rosca_direta
     ),
     Exercise(
         id = 7,
@@ -94,7 +237,7 @@ val exerciseList = listOf(
         sets = 3,
         reps = 12,
         weight = 15.0,
-        exercisePicture = R.drawable.rosca_direta // Placeholder image
+        exercisePicture = R.drawable.rosca_direta
     ),
     Exercise(
         id = 8,
@@ -103,7 +246,7 @@ val exerciseList = listOf(
         sets = 4,
         reps = 10,
         weight = 200.0,
-        exercisePicture = R.drawable.agachamento // Placeholder image
+        exercisePicture = R.drawable.agachamento
     ),
     Exercise(
         id = 9,
@@ -112,8 +255,7 @@ val exerciseList = listOf(
         sets = 3,
         reps = 12,
         weight = 60.0,
-        // Corrected: Replaced R.drawable.pull_up (assuming it's a GIF) with a static placeholder
-        exercisePicture = R.drawable.supino // Placeholder: Replace with a static rowing image (PNG/JPG)
+        exercisePicture = R.drawable.supino
     ),
     Exercise(
         id = 10,
@@ -122,8 +264,7 @@ val exerciseList = listOf(
         sets = 3,
         reps = 12,
         weight = 70.0,
-        // Corrected: Replaced R.drawable.pull_up (assuming it's a GIF) with a static placeholder
-        exercisePicture = R.drawable.supino // Placeholder: Replace with a static pull-down image (PNG/JPG)
+        exercisePicture = R.drawable.supino
     ),
     Exercise(
         id = 11,
@@ -132,7 +273,7 @@ val exerciseList = listOf(
         sets = 5,
         reps = 20,
         weight = 0.0,
-        exercisePicture = R.drawable.deadlift // Placeholder image
+        exercisePicture = R.drawable.deadlift
     ),
     Exercise(
         id = 12,
@@ -141,27 +282,8 @@ val exerciseList = listOf(
         sets = 5,
         reps = 30,
         weight = 0.0,
-        exercisePicture = R.drawable.deadlift // Placeholder image
+        exercisePicture = R.drawable.deadlift
     )
-)
-
-/**
- * Modelo de dados para os treinos (rotinas pré-definidas)
- */
-data class WorkoutRoutine(
-    val id: Int,
-    val name: String,
-    val description: String,
-    val duration: Int, // Estimated duration in minutes
-    val difficulty: String,
-    val category: String,
-    val image: Int,
-    val exercises: List<Exercise>, // List of exercises in the routine
-    val videoUrl: String? = null,
-    val audioUrl: String? = null,
-    val isFavorite: Boolean = false,
-    val rating: Float = 0f,
-    val caloriesBurned: Int = 0 // Estimated calories
 )
 
 val mockWorkoutRoutines = listOf(
@@ -173,7 +295,6 @@ val mockWorkoutRoutines = listOf(
         difficulty = "Intermediário",
         category = "Força",
         image = R.drawable.supino,
-        exercises = listOf(exerciseList[0], exerciseList[2], exerciseList[3], exerciseList[4]),
         videoUrl = "https://example.com/videos/fullbody.mp4",
         caloriesBurned = 450
     ),
@@ -185,7 +306,6 @@ val mockWorkoutRoutines = listOf(
         difficulty = "Iniciante",
         category = "Força",
         image = R.drawable.rosca_direta,
-        exercises = listOf(exerciseList[1], exerciseList[5], exerciseList[6]),
         audioUrl = "https://example.com/audio/arms_guidance.mp3",
         caloriesBurned = 300
     ),
@@ -197,7 +317,6 @@ val mockWorkoutRoutines = listOf(
         difficulty = "Avançado",
         category = "Força",
         image = R.drawable.agachamento,
-        exercises = listOf(exerciseList[2], exerciseList[4], exerciseList[7]),
         videoUrl = "https://example.com/videos/legs.mp4",
         isFavorite = true,
         caloriesBurned = 500
@@ -209,9 +328,7 @@ val mockWorkoutRoutines = listOf(
         duration = 40,
         difficulty = "Intermediário",
         category = "Força",
-        // Corrected: Replaced R.drawable.pull_up (assuming it's a GIF) with a static placeholder
-        image = R.drawable.supino, // Placeholder: Replace with a static back workout image (PNG/JPG)
-        exercises = listOf(exerciseList[3], exerciseList[8], exerciseList[9]),
+        image = R.drawable.supino,
         caloriesBurned = 380
     ),
     WorkoutRoutine(
@@ -222,21 +339,35 @@ val mockWorkoutRoutines = listOf(
         difficulty = "Avançado",
         category = "Cardio",
         image = R.drawable.deadlift,
-        exercises = listOf(exerciseList[10], exerciseList[11]),
         videoUrl = "https://example.com/videos/hiit.mp4",
         isFavorite = true,
         caloriesBurned = 400
     )
 )
 
-/**
- * Perguntas frequentes para a tela de Ajuda
- */
-data class FAQ(
-    val id: Int,
-    val question: String,
-    val answer: String
+val mockWorkoutRoutinesWithExercises = listOf(
+    WorkoutRoutineWithExercises(
+        routine = mockWorkoutRoutines[0],
+        exercises = listOf(exerciseList[0], exerciseList[2], exerciseList[3], exerciseList[4])
+    ),
+    WorkoutRoutineWithExercises(
+        routine = mockWorkoutRoutines[1],
+        exercises = listOf(exerciseList[1], exerciseList[5], exerciseList[6])
+    ),
+    WorkoutRoutineWithExercises(
+        routine = mockWorkoutRoutines[2],
+        exercises = listOf(exerciseList[2], exerciseList[4], exerciseList[7])
+    ),
+    WorkoutRoutineWithExercises(
+        routine = mockWorkoutRoutines[3],
+        exercises = listOf(exerciseList[3], exerciseList[8], exerciseList[9])
+    ),
+    WorkoutRoutineWithExercises(
+        routine = mockWorkoutRoutines[4],
+        exercises = listOf(exerciseList[10], exerciseList[11])
+    )
 )
+
 
 val faqList = listOf(
     FAQ(1, "Como registrar um novo treino?", "Na tela 'Log', clique no botão '+' e selecione uma rotina ou crie um treino personalizado."),
@@ -244,44 +375,4 @@ val faqList = listOf(
     FAQ(3, "Como usar o timer de descanso?", "Durante o registro de um treino, após completar uma série, clique no ícone de cronômetro para iniciar o descanso."),
     FAQ(4, "Como editar ou excluir um treino do histórico?", "Na tela 'Log', encontre o registro desejado e use os ícones de lápis (editar) ou lixeira (excluir)."),
     FAQ(5, "Como criar uma rotina personalizada?", "Atualmente, você pode registrar um treino personalizado na hora. A funcionalidade de salvar rotinas personalizadas será adicionada em breve.")
-)
-
-// --- New Models for Workout Logging ---
-
-/**
- * Represents a single set performed during a workout log.
- */
-data class PerformedSet(
-    val id: String = UUID.randomUUID().toString(), // Unique ID for the set
-    var reps: Int,
-    var weight: Double,
-    var isCompleted: Boolean = false
-)
-
-/**
- * Represents an exercise performed during a workout log, including its sets.
- */
-data class PerformedExercise(
-    val id: String = UUID.randomUUID().toString(), // Unique ID for this instance
-    val exerciseId: Int, // Reference to the base Exercise
-    val exerciseName: String,
-    val sets: MutableList<PerformedSet> = mutableListOf(),
-    val targetSets: Int, // From the original routine/exercise
-    val targetReps: Int,
-    val targetWeight: Double
-)
-
-/**
- * Represents a completed workout session saved in the log.
- */
-data class WorkoutLogEntry(
-    val id: String = UUID.randomUUID().toString(), // Unique ID for the log entry
-    val routineId: Int? = null, // ID of the WorkoutRoutine if based on one
-    val workoutName: String, // Name of the routine or "Treino Personalizado"
-    val startTime: Date,
-    var endTime: Date? = null,
-    var durationMillis: Long = 0,
-    val performedExercises: MutableList<PerformedExercise> = mutableListOf(),
-    var notes: String? = null,
-    var caloriesBurned: Int? = null // Can be calculated later
 )

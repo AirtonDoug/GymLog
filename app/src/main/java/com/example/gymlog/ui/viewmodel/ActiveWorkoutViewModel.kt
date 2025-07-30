@@ -6,18 +6,22 @@ import androidx.lifecycle.viewModelScope
 import com.example.gymlog.data.repositories.WorkoutRepository
 import com.example.gymlog.models.Exercise
 import com.example.gymlog.models.PerformedExercise
+import com.example.gymlog.models.PerformedExerciseWithSets
 import com.example.gymlog.models.PerformedSet
 import com.example.gymlog.models.WorkoutLogEntry
-import com.example.gymlog.models.WorkoutRoutine
+import com.example.gymlog.models.WorkoutLogEntryWithExercises
+import com.example.gymlog.models.WorkoutRoutineWithExercises
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import java.util.*
 
 // UI State for ActiveWorkout Screen
 data class ActiveWorkoutUiState(
-    val workoutRoutine: WorkoutRoutine? = null,
+    val workoutRoutine: WorkoutRoutineWithExercises? = null,
     val isCustomWorkout: Boolean = false,
     val currentExercises: List<PerformedExercise> = emptyList(),
+    val currentSets: Map<String, List<PerformedSet>> = emptyMap(),
+    val allExercises: List<Exercise> = emptyList(),
     val timerRunning: Boolean = false,
     val timerSeconds: Int = 0,
     val isLoading: Boolean = true,
@@ -60,10 +64,13 @@ class ActiveWorkoutViewModel(
             try {
                 if (isCustom) {
                     // For custom workout, start with empty exercise list
+                    val allExercises = workoutRepository.getAllExercises().first()
                     _uiState.update { it.copy(
                         isLoading = false,
                         isCustomWorkout = true,
-                        currentExercises = emptyList()
+                        currentExercises = emptyList(),
+                        currentSets = emptyMap(),
+                        allExercises = allExercises
                     )}
                 } else {
                     // For routine-based workout, load the routine
@@ -73,20 +80,24 @@ class ActiveWorkoutViewModel(
                             // Convert routine exercises to performed exercises
                             val performedExercises = routine.exercises.map { exercise ->
                                 PerformedExercise(
+                                    id = UUID.randomUUID().toString(),
                                     exerciseId = exercise.id,
                                     exerciseName = exercise.name,
-                                    sets = mutableListOf(),
                                     targetSets = exercise.sets,
                                     targetReps = exercise.reps,
-                                    targetWeight = exercise.weight
+                                    targetWeight = exercise.weight,
+                                    workoutLogId = "" // This will be set when the log is saved
                                 )
                             }
-
+                            val sets = performedExercises.associate { it.id to emptyList<PerformedSet>() }
+                            val allExercises = workoutRepository.getAllExercises().first()
                             _uiState.update { it.copy(
                                 isLoading = false,
                                 workoutRoutine = routine,
                                 isCustomWorkout = false,
-                                currentExercises = performedExercises
+                                currentExercises = performedExercises,
+                                currentSets = sets,
+                                allExercises = allExercises
                             )}
                         } else {
                             _uiState.update { it.copy(
@@ -108,75 +119,84 @@ class ActiveWorkoutViewModel(
     // Add a new exercise to custom workout
     fun addExercise(exercise: Exercise) {
         val performedExercise = PerformedExercise(
+            id = UUID.randomUUID().toString(),
             exerciseId = exercise.id,
             exerciseName = exercise.name,
-            sets = mutableListOf(),
             targetSets = exercise.sets,
             targetReps = exercise.reps,
-            targetWeight = exercise.weight
+            targetWeight = exercise.weight,
+            workoutLogId = "" // This will be set when the log is saved
         )
 
         _uiState.update { currentState ->
+            val newSets = currentState.currentSets.toMutableMap()
+            newSets[performedExercise.id] = emptyList()
             currentState.copy(
-                currentExercises = currentState.currentExercises + performedExercise
+                currentExercises = currentState.currentExercises + performedExercise,
+                currentSets = newSets
             )
         }
     }
 
     // Add a set to an exercise
-    fun addSet(exerciseIndex: Int, weight: Double, reps: Int) {
-        val currentExercises = _uiState.value.currentExercises.toMutableList()
-        if (exerciseIndex in currentExercises.indices) {
-            val exercise = currentExercises[exerciseIndex]
+    fun addSet(exerciseId: String) {
+        val currentSets = _uiState.value.currentSets.toMutableMap()
+        val setsForExercise = currentSets[exerciseId]?.toMutableList()
+        if (setsForExercise != null) {
+            val exercise = _uiState.value.currentExercises.find { it.id == exerciseId }
+            val lastSet = setsForExercise.lastOrNull()
             val newSet = PerformedSet(
                 id = UUID.randomUUID().toString(),
-                reps = reps,
-                weight = weight,
-                isCompleted = true
+                reps = lastSet?.reps ?: exercise?.targetReps ?: 0,
+                weight = lastSet?.weight ?: exercise?.targetWeight ?: 0.0,
+                performedExerciseId = exerciseId
             )
-
-            val updatedSets = exercise.sets.toMutableList().apply {
-                add(newSet)
-            }
-
-            currentExercises[exerciseIndex] = exercise.copy(sets = updatedSets)
-
-            _uiState.update { it.copy(currentExercises = currentExercises) }
+            setsForExercise.add(newSet)
+            currentSets[exerciseId] = setsForExercise
+            _uiState.update { it.copy(currentSets = currentSets) }
         }
     }
 
     // Update a set
-    fun updateSet(exerciseIndex: Int, setIndex: Int, weight: Double, reps: Int, completed: Boolean) {
-        val currentExercises = _uiState.value.currentExercises.toMutableList()
-        if (exerciseIndex in currentExercises.indices) {
-            val exercise = currentExercises[exerciseIndex]
-            val sets = exercise.sets.toMutableList()
-
-            if (setIndex in sets.indices) {
-                val updatedSet = sets[setIndex].copy(
-                    weight = weight,
-                    reps = reps,
-                    isCompleted = completed
-                )
-                sets[setIndex] = updatedSet
-
-                currentExercises[exerciseIndex] = exercise.copy(sets = sets)
-                _uiState.update { it.copy(currentExercises = currentExercises) }
-            }
+    fun updateSet(exerciseId: String, setIndex: Int, reps: String, weight: String) {
+        val currentSets = _uiState.value.currentSets.toMutableMap()
+        val setsForExercise = currentSets[exerciseId]?.toMutableList()
+        if (setsForExercise != null && setIndex in setsForExercise.indices) {
+            val set = setsForExercise[setIndex]
+            val updatedSet = set.copy(
+                reps = reps.toIntOrNull() ?: set.reps,
+                weight = weight.toDoubleOrNull() ?: set.weight
+            )
+            setsForExercise[setIndex] = updatedSet
+            currentSets[exerciseId] = setsForExercise
+            _uiState.update { it.copy(currentSets = currentSets) }
         }
     }
 
     // Remove a set
-    fun removeSet(exerciseIndex: Int, setIndex: Int) {
-        val currentExercises = _uiState.value.currentExercises.toMutableList()
-        if (exerciseIndex in currentExercises.indices) {
-            val exercise = currentExercises[exerciseIndex]
-            val sets = exercise.sets.toMutableList()
+    fun removeSet(exerciseId: String, setIndex: Int) {
+        val currentSets = _uiState.value.currentSets.toMutableMap()
+        val setsForExercise = currentSets[exerciseId]?.toMutableList()
+        if (setsForExercise != null && setIndex in setsForExercise.indices) {
+            setsForExercise.removeAt(setIndex)
+            currentSets[exerciseId] = setsForExercise
+            _uiState.update { it.copy(currentSets = currentSets) }
+        }
+    }
 
-            if (setIndex in sets.indices) {
-                sets.removeAt(setIndex)
-                currentExercises[exerciseIndex] = exercise.copy(sets = sets)
-                _uiState.update { it.copy(currentExercises = currentExercises) }
+    fun toggleSetCompletion(exerciseId: String, setIndex: Int) {
+        val currentSets = _uiState.value.currentSets.toMutableMap()
+        val setsForExercise = currentSets[exerciseId]?.toMutableList()
+        if (setsForExercise != null && setIndex in setsForExercise.indices) {
+            val set = setsForExercise[setIndex]
+            val updatedSet = set.copy(isCompleted = !set.isCompleted)
+            setsForExercise[setIndex] = updatedSet
+            currentSets[exerciseId] = setsForExercise
+            _uiState.update { it.copy(currentSets = currentSets) }
+
+            if (updatedSet.isCompleted) {
+                // start timer
+                startTimer()
             }
         }
     }
@@ -190,7 +210,7 @@ class ActiveWorkoutViewModel(
         }
     }
 
-    private fun startTimer() {
+    fun startTimer() {
         timerJob?.cancel()
         _uiState.update { it.copy(timerRunning = true, timerSeconds = 60) } // Default 60 seconds
 
@@ -206,9 +226,15 @@ class ActiveWorkoutViewModel(
         }
     }
 
-    private fun stopTimer() {
+    fun stopTimer() {
         timerJob?.cancel()
         _uiState.update { it.copy(timerRunning = false) }
+    }
+
+    fun addTimeToTimer(seconds: Int) {
+        _uiState.update { it.copy(timerSeconds = it.timerSeconds + seconds) }
+        startTimer()
+
     }
 
     // Reset timer to a specific value
@@ -224,18 +250,29 @@ class ActiveWorkoutViewModel(
                 val currentState = _uiState.value
                 val endTime = Date()
                 val durationMillis = endTime.time - workoutStartTime.time
+                val logId = UUID.randomUUID().toString()
+
+                val performedExercisesWithSets = currentState.currentExercises.map { pe ->
+                    PerformedExerciseWithSets(
+                        performedExercise = pe.copy(workoutLogId = logId),
+                        sets = currentState.currentSets[pe.id] ?: emptyList()
+                    )
+                }
 
                 // Create log entry
-                val logEntry = WorkoutLogEntry(
-                    id = UUID.randomUUID().toString(),
-                    routineId = currentState.workoutRoutine?.id,
-                    workoutName = currentState.workoutRoutine?.name ?: "Treino Personalizado",
-                    startTime = workoutStartTime,
-                    endTime = endTime,
-                    durationMillis = durationMillis,
-                    performedExercises = currentState.currentExercises.toMutableList(),
-                    notes = notes,
-                    caloriesBurned = currentState.workoutRoutine?.caloriesBurned
+                val logEntry = WorkoutLogEntryWithExercises(
+                    logEntry = WorkoutLogEntry(
+                        id = logId,
+                        routineId = currentState.workoutRoutine?.routine?.id,
+                        workoutName = currentState.workoutRoutine?.routine?.name
+                            ?: "Treino Personalizado",
+                        startTime = workoutStartTime,
+                        endTime = endTime,
+                        durationMillis = durationMillis,
+                        notes = notes,
+                        caloriesBurned = currentState.workoutRoutine?.routine?.caloriesBurned
+                    ),
+                    performedExercises = performedExercisesWithSets
                 )
 
                 // Save to repository

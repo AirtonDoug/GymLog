@@ -2,7 +2,7 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose) // Certifique-se que este plugin está definido no seu libs.versions.toml
-}
+    id("org.jetbrains.kotlin.kapt")}
 
 android {
     namespace = "com.example.gymlog"
@@ -70,6 +70,11 @@ dependencies {
     implementation ("androidx.compose.runtime:runtime-livedata:1.5.3") // Verifique se o BOM cobre isso ou adicione ao catalog
     implementation ("androidx.core:core-splashscreen:1.0.1")           // Adicione ao catalog
     implementation("androidx.compose.material:material-icons-extended-android:1.6.7") // Adicione ao catalog (esta é Material 2 icons, mas ok)
+
+    // Room
+    implementation(libs.androidx.room.runtime)
+    implementation(libs.androidx.room.ktx)
+    kapt(libs.androidx.room.compiler)
 
 
     testImplementation(libs.junit)

@@ -5,14 +5,14 @@ package com.example.gymlog.ui.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.gymlog.data.repositories.WorkoutRepository
-import com.example.gymlog.models.WorkoutRoutine
+import com.example.gymlog.models.WorkoutRoutineWithExercises
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
 // Data class to hold the UI state for the Home screen
 data class HomeUiState(
-    val routines: List<WorkoutRoutine> = emptyList(),
+    val routines: List<WorkoutRoutineWithExercises> = emptyList(),
     val searchQuery: String = "",
     val isLoading: Boolean = true,
     val errorMessage: String? = null,
@@ -37,10 +37,10 @@ class HomeViewModel(private val workoutRepository: WorkoutRepository) : ViewMode
             routines
         } else {
             routines.filter {
-                it.name.contains(query, ignoreCase = true) ||
-                        it.description.contains(query, ignoreCase = true) ||
-                        it.category.contains(query, ignoreCase = true) ||
-                        it.difficulty.contains(query, ignoreCase = true)
+                it.routine.name.contains(query, ignoreCase = true) ||
+                        it.routine.description.contains(query, ignoreCase = true) ||
+                        it.routine.category.contains(query, ignoreCase = true) ||
+                        it.routine.difficulty.contains(query, ignoreCase = true)
             }
         }
         HomeUiState(
@@ -62,16 +62,16 @@ class HomeViewModel(private val workoutRepository: WorkoutRepository) : ViewMode
         _searchQuery.value = query
     }
 
-    fun toggleFavorite(routine: WorkoutRoutine) {
+    fun toggleFavorite(routine: WorkoutRoutineWithExercises) {
         viewModelScope.launch {
-            _favoritingInProgress.update { it + routine.id }
+            _favoritingInProgress.update { it + routine.routine.id }
             try {
                 delay(1000) // Simula o atraso de rede
-                workoutRepository.toggleFavorite(routine.id)
+                workoutRepository.toggleFavorite(routine.routine.id)
             } catch (e: Exception) {
                 // Handle error
             } finally {
-                _favoritingInProgress.update { it - routine.id }
+                _favoritingInProgress.update { it - routine.routine.id }
             }
         }
     }

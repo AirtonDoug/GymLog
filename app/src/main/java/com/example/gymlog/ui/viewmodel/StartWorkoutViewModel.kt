@@ -3,13 +3,13 @@ package com.example.gymlog.ui.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.gymlog.data.repositories.WorkoutRepository
-import com.example.gymlog.models.WorkoutRoutine
+import com.example.gymlog.models.WorkoutRoutineWithExercises
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
 // UI State for StartWorkout Screen
 data class StartWorkoutUiState(
-    val availableRoutines: List<WorkoutRoutine> = emptyList(),
+    val availableRoutines: List<WorkoutRoutineWithExercises> = emptyList(),
     val isLoading: Boolean = true,
     val errorMessage: String? = null
 )

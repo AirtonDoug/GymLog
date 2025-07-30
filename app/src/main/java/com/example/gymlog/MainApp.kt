@@ -18,7 +18,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.core.content.ContextCompat
 import androidx.navigation.compose.rememberNavController
-import com.example.gymlog.data.repositories.UserPreferences
 import com.example.gymlog.data.repositories.UserPreferencesRepository
 import com.example.gymlog.ui.navigation.AppNavigation
 import com.example.gymlog.ui.theme.AppTheme
